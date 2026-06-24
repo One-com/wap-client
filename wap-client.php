@@ -1,13 +1,13 @@
 <?php
 /**
  * Plugin Name:       WAP Client
- * Plugin URI:        https://github.com/group-one/wap-client
+ * Plugin URI:        https://github.com/ankitsoni27/wap-client
  * Description:       WordPress AI Platform (WAP) client library. Integrates the WAP AI chat assistant into any WordPress plugin via a single static method call.
  * Version:           1.0.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
- * Author:            Group.one
- * Author URI:        https://www.group.one
+ * Author:            Ankit Soni
+ * Author URI:        https://github.com/ankitsoni27
  * License:           GPL-2.0-or-later
  * License URI:       https://spdx.org/licenses/GPL-2.0-or-later.html
  * Text Domain:       wap-client

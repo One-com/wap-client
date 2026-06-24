@@ -1,12 +1,12 @@
 {
-    "name": "group-one/wap-client",
+    "name": "ankitsoni27/wap-client",
     "description": "WordPress AI Platform (WAP) client library — drop-in Composer package for integrating AI chat into any WordPress plugin.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "authors": [
         {
-            "name": "Group.one",
-            "homepage": "https://www.group.one"
+            "name": "Ankit Soni",
+            "homepage": "https://github.com/ankitsoni27"
         }
     ],
     "require": {
@@ -35,7 +35,6 @@
         "wordpress",
         "ai",
         "chat",
-        "group-one",
         "wap"
     ]
 }
