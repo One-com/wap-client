@@ -17,7 +17,7 @@ session token. The AI itself runs on a separate backend service that you host.
 ## Installation
 
 ```bash
-composer require ankitsoni27/wap-client
+composer require groupone/wap-client
 ```
 
 ## Usage

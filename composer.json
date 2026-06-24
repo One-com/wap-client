@@ -1,20 +1,31 @@
 {
-    "name": "ankitsoni27/wap-client",
+    "name": "groupone/wap-client",
     "description": "WordPress AI Platform (WAP) client library — drop-in Composer package for integrating AI chat into any WordPress plugin.",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
+    "keywords": [
+        "wordpress",
+        "ai",
+        "chat",
+        "wap"
+    ],
+    "homepage": "https://github.com/ankitsoni27/wap-client",
     "authors": [
         {
-            "name": "Ankit Soni",
-            "homepage": "https://github.com/ankitsoni27"
+            "name": "group.one",
+            "homepage": "https://www.group.one"
         }
     ],
+    "support": {
+        "issues": "https://github.com/ankitsoni27/wap-client/issues",
+        "source": "https://github.com/ankitsoni27/wap-client"
+    },
     "require": {
         "php": ">=7.4"
     },
     "autoload": {
         "psr-4": {
-            "GroupOne\\WapClient\\": "includes/"
+            "Groupone\\WapClient\\": "includes/"
         },
         "files": [
             "wap-client.php"
@@ -22,7 +33,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "GroupOne\\WapClient\\Tests\\": "tests/"
+            "Groupone\\WapClient\\Tests\\": "tests/"
         }
     },
     "config": {
@@ -30,11 +41,5 @@
         "sort-packages": true
     },
     "minimum-stability": "stable",
-    "prefer-stable": true,
-    "keywords": [
-        "wordpress",
-        "ai",
-        "chat",
-        "wap"
-    ]
+    "prefer-stable": true
 }

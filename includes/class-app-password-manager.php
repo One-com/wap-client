@@ -7,12 +7,12 @@
  * stored. The uuid of the most recently created password is kept in user_meta
  * so it can be revoked before the next provisioning.
  *
- * @package GroupOne\WapClient
+ * @package Groupone\WapClient
  */
 
 declare(strict_types=1);
 
-namespace GroupOne\WapClient;
+namespace Groupone\WapClient;
 
 defined('ABSPATH') || exit;
 

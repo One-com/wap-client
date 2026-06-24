@@ -6,8 +6,8 @@
  * Version:           1.0.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
- * Author:            Ankit Soni
- * Author URI:        https://github.com/ankitsoni27
+ * Author:            group.one
+ * Author URI:        https://www.group.one
  * License:           GPL-2.0-or-later
  * License URI:       https://spdx.org/licenses/GPL-2.0-or-later.html
  * Text Domain:       wap-client
@@ -26,10 +26,10 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 } else {
     // Manual class map fallback when Composer is not available.
     $class_map = [
-        'GroupOne\\WapClient\\AppPasswordManager' => __DIR__ . '/includes/class-app-password-manager.php',
-        'GroupOne\\WapClient\\ApiClient'          => __DIR__ . '/includes/class-api-client.php',
-        'GroupOne\\WapClient\\ChatWidget'         => __DIR__ . '/includes/class-chat-widget.php',
-        'GroupOne\\WapClient\\GdprHandler'        => __DIR__ . '/includes/class-gdpr-handler.php',
+        'Groupone\\WapClient\\AppPasswordManager' => __DIR__ . '/includes/class-app-password-manager.php',
+        'Groupone\\WapClient\\ApiClient'          => __DIR__ . '/includes/class-api-client.php',
+        'Groupone\\WapClient\\ChatWidget'         => __DIR__ . '/includes/class-chat-widget.php',
+        'Groupone\\WapClient\\GdprHandler'        => __DIR__ . '/includes/class-gdpr-handler.php',
     ];
 
     spl_autoload_register(static function (string $class) use ($class_map): void {
@@ -39,9 +39,9 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     });
 }
 
-use GroupOne\WapClient\AppPasswordManager;
-use GroupOne\WapClient\ChatWidget;
-use GroupOne\WapClient\GdprHandler;
+use Groupone\WapClient\AppPasswordManager;
+use Groupone\WapClient\ChatWidget;
+use Groupone\WapClient\GdprHandler;
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -99,10 +99,10 @@ add_action('plugins_loaded', 'wap_client_boot', 20);
  */
 function wap_client_boot(): void {
     // AJAX: server-side auth call to WAP (avoids browser CORS restrictions).
-    add_action('wp_ajax_wap_client_auth', ['GroupOne\\WapClient\\ChatWidget', 'ajax_auth']);
+    add_action('wp_ajax_wap_client_auth', ['Groupone\\WapClient\\ChatWidget', 'ajax_auth']);
 
     // AJAX: GDPR erasure — proxies DELETE /api/v1/me/data to WAP.
-    add_action('wp_ajax_wap_client_delete_data', ['GroupOne\\WapClient\\GdprHandler', 'ajax_delete_data']);
+    add_action('wp_ajax_wap_client_delete_data', ['Groupone\\WapClient\\GdprHandler', 'ajax_delete_data']);
 
     // Admin notice when Application Passwords are unavailable (non-HTTPS).
     add_action('admin_notices', 'wap_client_maybe_show_https_notice');
@@ -136,7 +136,7 @@ function wap_client_maybe_show_https_notice(): void {
  * menu setup hook. Everything else (App Password provisioning, session
  * management, widget rendering) is handled automatically.
  *
- * @package GroupOne\WapClient
+ * @package Groupone\WapClient
  *
  * @example
  * // Minimal integration — call from the plugin's admin_menu callback:
@@ -218,7 +218,7 @@ final class WapClient
         }
 
         // Obtain a fresh WAP session from the backend on every page load.
-        $api_client = new \GroupOne\WapClient\ApiClient($auth_args['server_url']);
+        $api_client = new \Groupone\WapClient\ApiClient($auth_args['server_url']);
         $result     = $api_client->create_session(array_merge($auth_args, [
             'wp_username'     => wp_get_current_user()->user_login,
             'wp_app_password' => $app_password,

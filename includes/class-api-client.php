@@ -6,12 +6,12 @@
  * FastAPI backend. Uses wp_remote_post / wp_remote_get so requests respect
  * WordPress HTTP proxy settings and SSL verification configuration.
  *
- * @package GroupOne\WapClient
+ * @package Groupone\WapClient
  */
 
 declare(strict_types=1);
 
-namespace GroupOne\WapClient;
+namespace Groupone\WapClient;
 
 defined('ABSPATH') || exit;
 

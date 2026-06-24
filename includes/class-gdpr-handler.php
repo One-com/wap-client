@@ -6,12 +6,12 @@
  * preflight from the browser). The session token is passed through PHP memory
  * only — it is never stored or persisted in WordPress.
  *
- * @package GroupOne\WapClient
+ * @package Groupone\WapClient
  */
 
 declare(strict_types=1);
 
-namespace GroupOne\WapClient;
+namespace Groupone\WapClient;
 
 defined('ABSPATH') || exit;
 

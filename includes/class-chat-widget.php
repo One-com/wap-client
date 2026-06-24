@@ -5,12 +5,12 @@
  * Registers the WordPress admin menu page for the WAP chat UI and handles
  * all PHP-side rendering, asset loading, and AJAX auth responses.
  *
- * @package GroupOne\WapClient
+ * @package Groupone\WapClient
  */
 
 declare(strict_types=1);
 
-namespace GroupOne\WapClient;
+namespace Groupone\WapClient;
 
 defined('ABSPATH') || exit;
 
