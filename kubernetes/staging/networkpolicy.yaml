@@ -1,0 +1,45 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: wap-egress-${RELEASE_ENVIRONMENT}
+  namespace: ${K8S_NAMESPACE}
+  labels:
+    app: wap
+    environment: ${RELEASE_ENVIRONMENT}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: wap-app-${RELEASE_ENVIRONMENT}
+  policyTypes:
+    - Egress
+  egress:
+    # 1. DNS resolution (kube-dns). Explicit because DNS lives in-cluster
+    #    (RFC1918) and would otherwise be blocked by rule 3's except list.
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # 2. In-cluster Redis (managed-redis namespace). Explicit for the same reason.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: managed-redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # 3. Public internet EXCEPT private ranges. Allows outbound to arbitrary
+    #    WordPress sites (MCP) and the external managed Postgres, while blocking
+    #    RFC1918 + link-local as defence-in-depth against SSRF.
+    #    NOTE: if postgresql-e.env.datastore-cph3.one.com resolves to an RFC1918
+    #    address, add an explicit allow (ipBlock /32, TCP 5432) above this rule.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wap-configmap-${RELEASE_ENVIRONMENT}
+  namespace: ${K8S_NAMESPACE}
+data:
+  ENV: "production"
+  REDIS_URL: "redis://wordpress-agentic-platform-production-redis.managed-redis.svc.cluster.local:6379/0"
+  ALLOWED_ORIGINS: "https://${K8S_NAMESPACE}.public-default.k8spod4-cph3.ingress.k8s.g1i.one,https://${K8S_NAMESPACE}.default.k8spod4-cph3.ingress.k8s.g1i.one"
+  PROMETHEUS_ENABLED: "true"
+  LANGFUSE_BASE_URL: "https://langfuse-prod.default.k8spod4-cph3.ingress.k8s.g1i.one"
+  PUBLIC_API_URL: "https://${K8S_NAMESPACE}.public-default.k8spod4-cph3.ingress.k8s.g1i.one"

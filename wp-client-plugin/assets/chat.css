@@ -1,0 +1,191 @@
+/* WAP Test Client — admin chat styles */
+
+#wap-test-wrap {
+	max-width: 900px;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+
+#wap-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin: 12px 0;
+	flex-wrap: wrap;
+}
+
+#wap-status {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.wap-dot {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+.wap-dot.disconnected { background: #d63638; }
+.wap-dot.connecting   { background: #f0b429; }
+.wap-dot.connected    { background: #00a32a; }
+
+#wap-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+#wap-agent-label {
+	font-style: italic;
+	color: #646970;
+	font-size: 13px;
+}
+
+/* ── Message area ────────────────────────────────────────────────────────── */
+
+#wap-messages {
+	height: 480px;
+	overflow-y: auto;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	padding: 12px;
+	background: #f6f7f7;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+/* ── Bubbles ─────────────────────────────────────────────────────────────── */
+
+.wap-bubble {
+	max-width: 78%;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.wap-bubble.user {
+	align-self: flex-end;
+	align-items: flex-end;
+}
+
+.wap-bubble.assistant {
+	align-self: flex-start;
+	align-items: flex-start;
+}
+
+.wap-bubble-label {
+	font-size: 11px;
+	color: #646970;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.wap-bubble-text {
+	padding: 8px 12px;
+	border-radius: 12px;
+	line-height: 1.5;
+	white-space: pre-wrap;
+	word-break: break-word;
+	font-size: 14px;
+}
+
+.wap-bubble.user .wap-bubble-text {
+	background: #2271b1;
+	color: #fff;
+	border-bottom-right-radius: 2px;
+}
+
+.wap-bubble.assistant .wap-bubble-text {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-bottom-left-radius: 2px;
+}
+
+/* ── Events (routing, tools, etc.) ──────────────────────────────────────── */
+
+.wap-event {
+	font-size: 12px;
+	padding: 4px 8px;
+	border-radius: 4px;
+	align-self: stretch;
+}
+
+.wap-event small {
+	color: #646970;
+}
+
+.wap-event.routing {
+	background: #dce5f5;
+	color: #1d4ed8;
+	border-left: 3px solid #1d4ed8;
+}
+
+.wap-event.specialist,
+.wap-event.specialist-preview {
+	background: #ede9fe;
+	color: #6d28d9;
+	border-left: 3px solid #6d28d9;
+}
+
+.wap-event.synthesis {
+	background: #f0fdf4;
+	color: #15803d;
+	border-left: 3px solid #15803d;
+}
+
+.wap-event.tool,
+.wap-event.tool-result {
+	font-family: monospace;
+	background: #fefce8;
+	border-left: 3px solid #ca8a04;
+}
+
+.wap-event.tool pre,
+.wap-event.tool-result pre {
+	margin: 4px 0 0;
+	white-space: pre-wrap;
+	font-size: 11px;
+}
+
+.wap-event.error {
+	background: #fce8e8;
+	color: #b91c1c;
+	border-left: 3px solid #b91c1c;
+}
+
+/* ── Input row ───────────────────────────────────────────────────────────── */
+
+#wap-input-row {
+	display: flex;
+	gap: 8px;
+	margin-top: 8px;
+	align-items: flex-end;
+}
+
+#wap-input {
+	flex: 1;
+	font-size: 14px;
+	padding: 8px;
+	resize: vertical;
+	min-height: 60px;
+}
+
+#wap-send-btn {
+	align-self: flex-end;
+	height: 36px;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+
+#wap-footer {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 6px;
+	font-size: 12px;
+	color: #646970;
+}

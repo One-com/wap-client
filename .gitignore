@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+*.env.local
+
+# Python test/coverage artifacts
+.coverage
+.coverage.*
+.pytest_cache/
+__pycache__/

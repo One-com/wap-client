@@ -1,0 +1,174 @@
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "trunk"
+
+stages:
+  - lint
+  - test
+  - build
+  - deploy
+
+default:
+  tags:
+    - k8s
+
+variables:
+  PYTHON_VERSION: "3.13"
+  UV_VERSION: "0.5"
+  # Postgres/Redis for integration tests
+  POSTGRES_DB: wap_test
+  POSTGRES_USER: wap
+  POSTGRES_PASSWORD: wap_test_password
+  POSTGRES_HOST_AUTH_METHOD: trust
+
+# ── Shared Python setup ────────────────────────────────────────────────────────
+.python-base:
+  image: harbor.one.com/mirror/docker.io/library/python:${PYTHON_VERSION}-slim-trixie
+  before_script:
+    - pip install --target /tmp/pip-packages uv==${UV_VERSION}
+    - export PATH="/tmp/pip-packages/bin:$PATH"
+    - export UV_CACHE_DIR=/tmp/uv-cache
+    - cd py-backend
+    - uv sync --extra dev
+
+# ── Lint jobs ──────────────────────────────────────────────────────────────────
+ruff:
+  extends: .python-base
+  stage: lint
+  script:
+    - uv run ruff check app/ tests/
+    - uv run ruff format --check app/ tests/
+  allow_failure: false
+
+mypy:
+  extends: .python-base
+  stage: lint
+  script:
+    - uv run mypy app/
+  allow_failure: false
+
+pylint:
+  extends: .python-base
+  stage: lint
+  script:
+    - uv run pylint app/
+  allow_failure: false
+
+# Warn (non-blocking) if the backend's committed copies of the WP client chat
+# assets have drifted from the canonical source in wp-client-plugin/. The sync is
+# intentionally manual — this only nudges, it does not block the pipeline.
+wap-client-asset-drift:
+  extends: .python-base
+  stage: lint
+  script:
+    - |
+      if ! bash scripts/sync_wap_client_assets.sh --check; then
+        echo ""
+        echo "::warning:: WP client chat assets have drifted between the plugin and the backend copy."
+        echo "Run 'py-backend/scripts/sync_wap_client_assets.sh' and commit the refreshed copies."
+        exit 1
+      fi
+  allow_failure: true
+
+# ── Test job ───────────────────────────────────────────────────────────────────
+pytest:
+  extends: .python-base
+  stage: test
+  services:
+    - name: harbor.one.com/mirror/docker.io/library/postgres:16
+      alias: postgres
+    - name: harbor.one.com/mirror/docker.io/library/redis:alpine
+      alias: redis
+  variables:
+    DATABASE_URL: "postgresql+asyncpg://wap:wap_test_password@postgres:5432/wap_test"
+    REDIS_URL: "redis://redis:6379/0"
+    SESSION_ENCRYPTION_KEY: "dGVzdGtleXRlc3RrZXl0ZXN0a2V5dGVzdGtleXQ="  # test-only, not a secret
+    ADMIN_API_KEY: "test-admin-key"
+    ANTHROPIC_API_KEY: "test-key"
+    DEV_BYPASS_LICENSE: "true"
+    ENV: "test"
+  script:
+    - uv run pytest tests/ --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=60
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: py-backend/coverage.xml
+    expire_in: 1 week
+
+# ── Build job ─────────────────────────────────────────────────────────────────
+build:
+  stage: build
+  image: harbor.one.com/standard-images/ci/docker-buildkit:jammy-rootless
+  variables:
+    APP_IMAGE_NAME: harbor.one.com/cpo-eng/wap-poc
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "trunk"
+      when: on_success
+    - when: manual
+  script:
+    - docker_build py-backend/ -t "$APP_IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+
+# ── Deploy stage ──────────────────────────────────────────────────────────────
+# Renders kubernetes/<env>/ via envsubst and applies to the env's namespace.
+# Branch mapping: develop -> staging (auto), trunk -> production (auto),
+# any other branch -> test (manual only).
+.deploy-template:
+  image: harbor.one.com/standard-images/ci/kubectl:jammy-rootless
+  stage: deploy
+  variables:
+    APP_IMAGE_NAME: harbor.one.com/cpo-eng/wap-poc
+    K8S_CONTEXT: k8spod4
+  script:
+    - export RELEASE_COMMIT_SHORT_SHA=$CI_COMMIT_SHORT_SHA
+    - export CONFIGMAP_HASH=$(cat kubernetes/${RELEASE_ENVIRONMENT}/configmap.yaml | md5sum | head -c 32)
+    - ./kubernetes/print-env.sh
+    - kubectl-setup
+    - ./kubernetes/generate-yaml.sh | tee tmp-deployment.yaml
+    - kubectl apply --dry-run=server --validate --filename tmp-deployment.yaml
+    - kubectl apply --validate --filename tmp-deployment.yaml
+  after_script:
+    # Wait for the rollout, then smoke-check /health from inside the cluster.
+    - kubectl -n $K8S_NAMESPACE rollout status deployment.apps/wap-app-${RELEASE_ENVIRONMENT} --timeout=300s
+    - kubectl -n $K8S_NAMESPACE run wap-smoke-$CI_JOB_ID --rm -i --restart=Never --quiet
+        --image=harbor.one.com/standard-images/ci/kubectl:jammy-rootless --
+        curl -fsS http://wap-${RELEASE_ENVIRONMENT}.${K8S_NAMESPACE}.svc.cluster.local/health
+
+deploy-test:
+  extends: .deploy-template
+  variables:
+    RELEASE_ENVIRONMENT: test
+    K8S_NAMESPACE: wordpress-agentic-platform-test
+  environment:
+    name: test
+    url: https://wordpress-agentic-platform-test.public-default.k8spod4-cph3.ingress.k8s.g1i.one/
+  rules:
+    - if: '$CI_COMMIT_BRANCH != "develop" && $CI_COMMIT_BRANCH != "trunk"'
+      when: manual
+      allow_failure: true
+
+deploy-staging:
+  extends: .deploy-template
+  variables:
+    RELEASE_ENVIRONMENT: staging
+    K8S_NAMESPACE: wordpress-agentic-platform-staging
+  environment:
+    name: staging
+    url: https://wordpress-agentic-platform-staging.public-default.k8spod4-cph3.ingress.k8s.g1i.one/
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      when: on_success
+
+deploy-production:
+  extends: .deploy-template
+  variables:
+    RELEASE_ENVIRONMENT: production
+    K8S_NAMESPACE: wordpress-agentic-platform-production
+  environment:
+    name: production
+    url: https://wordpress-agentic-platform-production.public-default.k8spod4-cph3.ingress.k8s.g1i.one/
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "trunk"'
+      when: on_success

@@ -1,0 +1,104 @@
+{% extends "admin/base.html" %}
+{% block title %}Prompt Snippets — WAP Admin{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-semibold text-gray-800">Prompt Snippets</h1>
+        <p class="mt-1 text-sm text-gray-500">Reusable blocks referenced in agent system prompts as <code class="font-mono bg-gray-100 px-1 rounded">&#123;&#123;snippet:key&#125;&#125;</code>.</p>
+    </div>
+    <button
+        onclick="document.getElementById('new-snippet-form').classList.toggle('hidden')"
+        class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700 transition-colors">
+        + New Snippet
+    </button>
+</div>
+
+<div id="snippets-toast" class="hidden mb-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded p-3"></div>
+
+<!-- New snippet form (hidden by default) -->
+<div id="new-snippet-form" class="hidden bg-white rounded-lg shadow p-6 mb-6">
+    <h2 class="text-lg font-medium mb-4 text-gray-800">Create Snippet</h2>
+    <form
+        hx-post="/admin/snippets"
+        hx-ext="json-enc"
+        hx-swap="none"
+        hx-on::after-request="
+            if(event.detail.successful){
+                document.getElementById('new-snippet-form').classList.add('hidden');
+                window.location.reload();
+            }
+        "
+        class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Key <span class="text-gray-400 font-normal">(lowercase, hyphens/underscores only)</span></label>
+            <input type="text" name="key" required pattern="[a-z0-9_-]+" placeholder="my-snippet-key"
+                class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Content</label>
+            <textarea name="content" rows="6" required
+                class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+        <div class="flex gap-3 justify-end pt-2 border-t border-gray-100">
+            <button type="button"
+                onclick="document.getElementById('new-snippet-form').classList.add('hidden')"
+                class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                Cancel
+            </button>
+            <button type="submit"
+                class="px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors">
+                Create Snippet
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Existing snippets -->
+<div class="space-y-4">
+    {% for snippet in snippets %}
+    <div class="bg-white rounded-lg shadow p-6" id="snippet-{{ snippet.key }}">
+        <div class="flex items-center justify-between mb-3">
+            <span class="font-mono font-medium text-gray-800 text-sm bg-gray-100 px-2 py-1 rounded">{{ snippet.key }}</span>
+            <button
+                hx-delete="/admin/snippets/{{ snippet.key }}"
+                hx-target="#snippet-{{ snippet.key }}"
+                hx-swap="outerHTML"
+                hx-confirm="Delete snippet '{{ snippet.key }}'? Any agents referencing it will fail to load until their prompts are updated."
+                class="text-red-500 hover:underline text-sm">Delete</button>
+        </div>
+        <textarea
+            id="snippet-content-{{ snippet.key }}"
+            rows="6"
+            class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">{{ snippet.content }}</textarea>
+        <div class="mt-3 flex justify-end">
+            <button
+                hx-put="/admin/snippets/{{ snippet.key }}"
+                hx-ext="json-enc"
+                hx-vals='js:{"content": document.getElementById("snippet-content-{{ snippet.key }}").value}'
+                hx-swap="none"
+                hx-on::after-request="
+                    var toast = document.getElementById('snippets-toast');
+                    if(event.detail.successful){
+                        toast.textContent = 'Snippet saved.';
+                        toast.classList.remove('hidden', 'text-red-700', 'bg-red-50', 'border-red-200');
+                        toast.classList.add('text-green-700', 'bg-green-50', 'border-green-200');
+                    } else {
+                        toast.textContent = 'Failed to save snippet.';
+                        toast.classList.remove('hidden', 'text-green-700', 'bg-green-50', 'border-green-200');
+                        toast.classList.add('text-red-700', 'bg-red-50', 'border-red-200');
+                    }
+                    toast.classList.remove('hidden');
+                    setTimeout(() => toast.classList.add('hidden'), 3000);
+                "
+                class="px-4 py-2 text-sm text-white bg-green-600 rounded hover:bg-green-700 transition-colors">
+                Save
+            </button>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+        No snippets yet. Create your first one.
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

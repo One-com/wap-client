@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wap-ingress-internal-${RELEASE_ENVIRONMENT}
+  namespace: ${K8S_NAMESPACE}
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  labels:
+    app: wap
+    environment: ${RELEASE_ENVIRONMENT}
+spec:
+  # Internal-only ingress for the admin API (/admin/*). The `nginx` class serves
+  # cluster-internal traffic via *.default.k8spod4-cph3.ingress.k8s.g1i.one.
+  rules:
+    - host: ${K8S_NAMESPACE}.default.k8spod4-cph3.ingress.k8s.g1i.one
+      http:
+        paths:
+          - path: /admin
+            pathType: Prefix
+            backend:
+              service:
+                name: wap-${RELEASE_ENVIRONMENT}
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - ${K8S_NAMESPACE}.default.k8spod4-cph3.ingress.k8s.g1i.one
+      secretName: wap-ingress-internal-${RELEASE_ENVIRONMENT}

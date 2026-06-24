@@ -1,0 +1,148 @@
+{% extends "admin/base.html" %}
+{% block title %}Chat Tester — WAP Admin{% endblock %}
+{% block content %}
+
+<!-- Reuse the exact WP client widget styles (synced from the WP plugin). -->
+<link rel="stylesheet" href="/admin/static/wap-chat.css">
+
+<div class="mb-6">
+    <h1 class="text-2xl font-semibold text-gray-800">Chat Tester</h1>
+    <p class="mt-1 text-sm text-gray-500">
+        Talk to any agent with the same chat widget your users get on WordPress.
+        Pick a role, optionally connect a real WordPress site, then chat.
+    </p>
+</div>
+
+<div id="chat-toast" class="hidden mb-4 text-sm rounded p-3"></div>
+
+<!-- Connection panel -->
+<div class="bg-white rounded-lg shadow p-4 mb-6">
+    <h2 class="text-sm font-semibold text-gray-700 mb-3">Connection</h2>
+    <form id="connect-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2">
+            <label class="block text-xs text-gray-500 mb-1">Role</label>
+            <select id="role-select" required
+                    class="border border-gray-300 rounded px-2 py-1 text-sm w-full md:w-96 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {% for r in roles %}
+                <option value="{{ loop.index0 }}">{{ r.role }} — {{ r.agentName }}</option>
+                {% else %}
+                <option value="" disabled selected>No role mappings defined — add one under Roles.</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="md:col-span-2 text-xs text-gray-500 -mb-1">
+            WordPress connection (optional). Leave empty to chat without a real site —
+            the agent responds but WordPress tools are unavailable. <strong>Admin testing only.</strong>
+        </div>
+
+        <div>
+            <label class="block text-xs text-gray-500 mb-1">WP MCP URL</label>
+            <input type="url" id="mcp-endpoint" autocomplete="off"
+                   placeholder="https://example.com/wp-json/mcp/mcp-adapter-default-server"
+                   class="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+            <label class="block text-xs text-gray-500 mb-1">WP username</label>
+            <input type="text" id="wp-username" autocomplete="off"
+                   class="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+            <label class="block text-xs text-gray-500 mb-1">WP Application Password</label>
+            <input type="password" id="wp-app-password" autocomplete="off"
+                   class="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div class="md:col-span-2">
+            <button type="submit"
+                    class="bg-blue-600 text-white text-sm px-4 py-1.5 rounded hover:bg-blue-700">
+                Connect
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Widget host: #wap-chat-root is injected on Connect so the reused JS mounts here. -->
+<div id="chat-host" class="bg-white rounded-lg shadow p-4 hidden" style="max-width: 760px;"></div>
+
+<!-- Role auth params resolved server-side (avoids re-parsing role strings in JS). -->
+<script id="roles-data" type="application/json">
+    {{ roles | tojson }}
+</script>
+
+<!-- The reused WP client widget. It auto-inits on DOMContentLoaded but finds no
+     #wap-chat-root yet (we mount it on Connect), so it no-ops until we call
+     WapChat.init() ourselves. -->
+<script defer src="/admin/static/wap-chat.js"></script>
+
+<script>
+(function () {
+    var roles = JSON.parse(document.getElementById('roles-data').textContent);
+    var form = document.getElementById('connect-form');
+    var host = document.getElementById('chat-host');
+    var toast = document.getElementById('chat-toast');
+
+    // Strings mirror the WP plugin's wp_localize_script i18n array so the widget
+    // reads identically to production.
+    var I18N = {
+        placeholder:  'Ask the AI assistant…',
+        send:         'Send',
+        reconnecting: 'Reconnecting…',
+        actionLabel:  'Action',
+        showDetails:  'Show details',
+        hideDetails:  'Hide details',
+        deleteData:   'Delete my data',
+        deleteConfirm: 'This will permanently delete all your conversation history with the AI assistant. This cannot be undone. Continue?',
+        deleteSuccess: 'Your data has been deleted.',
+        errorGeneric:  'An error occurred. Please try again.',
+        errorRateLimit: 'Too many requests. Please wait before sending another message.'
+    };
+
+    function showToast(msg, ok) {
+        toast.textContent = msg;
+        toast.className = 'mb-4 text-sm rounded p-3 ' + (ok
+            ? 'text-green-700 bg-green-50 border border-green-200'
+            : 'text-red-700 bg-red-50 border border-red-200');
+    }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        var idx = document.getElementById('role-select').value;
+        var role = roles[idx];
+        if (!role) {
+            showToast('Select a role first.', false);
+            return;
+        }
+
+        // Configure the reused widget exactly as a WordPress page would, but with
+        // the "direct" auth strategy pointing at the admin session endpoint.
+        // PUBLIC_API_URL is set on k8s where /admin/* and /api/* are on different
+        // ingress hostnames; falls back to window.location.origin in local dev.
+        window.WapClientConfig = {
+            authStrategy:   'direct',
+            authEndpoint:   '/admin/chat/session',
+            wapBrowserUrl:  {{ public_api_url | tojson }} || window.location.origin,
+            product:        role.product,
+            mode:           role.mode,
+            pageContext:    role.pageContext || '',
+            mcpEndpoint:    document.getElementById('mcp-endpoint').value.trim(),
+            wpUsername:     document.getElementById('wp-username').value.trim(),
+            wpAppPassword:  document.getElementById('wp-app-password').value,
+            i18n:           I18N
+        };
+
+        // Fresh mount point each time so reconnecting with a new role starts clean.
+        host.innerHTML = '<div id="wap-chat-root" class="wap-chat-root" data-product="'
+            + role.product + '"></div>';
+        host.classList.remove('hidden');
+
+        if (window.WapChat && typeof window.WapChat.init === 'function') {
+            window.WapChat.init();
+            showToast('Connected to ' + role.role + '.', true);
+        } else {
+            showToast('Chat widget failed to load.', false);
+        }
+    });
+})();
+</script>
+{% endblock %}

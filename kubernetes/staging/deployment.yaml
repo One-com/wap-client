@@ -1,0 +1,142 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: wap-app-${RELEASE_ENVIRONMENT}
+  namespace: ${K8S_NAMESPACE}
+  labels:
+    app.kubernetes.io/name: wap-app-${RELEASE_ENVIRONMENT}
+    app: wap
+    environment: ${RELEASE_ENVIRONMENT}
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wap-app-${RELEASE_ENVIRONMENT}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wap-app-${RELEASE_ENVIRONMENT}
+        app: wap
+        environment: ${RELEASE_ENVIRONMENT}
+      annotations:
+        config-map-hash: ${CONFIGMAP_HASH}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+      initContainers:
+        # Apply database migrations before the app starts. Uses the same image;
+        # composes DATABASE_URL inline from the `postgres` SealedSecret parts.
+        - name: alembic-migrate
+          image: ${APP_IMAGE_NAME}:${RELEASE_COMMIT_SHORT_SHA}
+          imagePullPolicy: IfNotPresent
+          workingDir: /app
+          command: ["/bin/sh", "-c"]
+          args:
+            - >-
+              export DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST/$PGDATABASE?sslmode=$PGSSLMODE";
+              exec alembic upgrade head
+          # alembic/env.py builds the full Settings model, so the init container
+          # needs the same config + secrets as the app container, not just PG*.
+          envFrom:
+            - configMapRef:
+                name: wap-configmap-${RELEASE_ENVIRONMENT}
+          env:
+            - name: PGHOST
+              valueFrom: { secretKeyRef: { name: postgres, key: PGHOST } }
+            - name: PGUSER
+              valueFrom: { secretKeyRef: { name: postgres, key: PGUSER } }
+            - name: PGPASSWORD
+              valueFrom: { secretKeyRef: { name: postgres, key: PGPASSWORD } }
+            - name: PGDATABASE
+              valueFrom: { secretKeyRef: { name: postgres, key: PGDATABASE } }
+            - name: PGSSLMODE
+              valueFrom: { secretKeyRef: { name: postgres, key: PGSSLMODE } }
+            # App secrets (from the manually-created wap-app-secrets SealedSecret)
+            - name: SESSION_ENCRYPTION_KEY
+              valueFrom: { secretKeyRef: { name: wap-app-secrets, key: SESSION_ENCRYPTION_KEY } }
+            - name: ADMIN_API_KEY
+              valueFrom: { secretKeyRef: { name: wap-app-secrets, key: ADMIN_API_KEY } }
+            - name: ANTHROPIC_API_KEY
+              valueFrom: { secretKeyRef: { name: wap-app-secrets, key: ANTHROPIC_API_KEY } }
+            - name: LANGFUSE_PUBLIC_KEY
+              valueFrom: { secretKeyRef: { name: wap-app-secrets, key: LANGFUSE_PUBLIC_KEY, optional: true } }
+            - name: LANGFUSE_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: wap-app-secrets, key: LANGFUSE_SECRET_KEY, optional: true } }
+            - name: SENTRY_DSN
+              valueFrom: { secretKeyRef: { name: wap-app-secrets, key: SENTRY_DSN, optional: true } }
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      containers:
+        - name: wap-${RELEASE_ENVIRONMENT}
+          image: ${APP_IMAGE_NAME}:${RELEASE_COMMIT_SHORT_SHA}
+          imagePullPolicy: IfNotPresent
+          workingDir: /app
+          # Compose DATABASE_URL from the `postgres` SealedSecret parts, then exec uvicorn.
+          # --workers 1 is required: the LangGraph checkpointer pool is in-process.
+          command: ["/bin/sh", "-c"]
+          args:
+            - >-
+              export DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST/$PGDATABASE?sslmode=$PGSSLMODE";
+              exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --access-log
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: wap-configmap-${RELEASE_ENVIRONMENT}
+          env:
+            # Postgres parts -> composed into DATABASE_URL by the command above
+            - name: PGHOST
+              valueFrom: { secretKeyRef: { name: postgres, key: PGHOST } }
+            - name: PGUSER
+              valueFrom: { secretKeyRef: { name: postgres, key: PGUSER } }
+            - name: PGPASSWORD
+              valueFrom: { secretKeyRef: { name: postgres, key: PGPASSWORD } }
+            - name: PGDATABASE
+              valueFrom: { secretKeyRef: { name: postgres, key: PGDATABASE } }
+            - name: PGSSLMODE
+              valueFrom: { secretKeyRef: { name: postgres, key: PGSSLMODE } }
+            # App secrets (from the manually-created wap-app-secrets SealedSecret)
+            - name: SESSION_ENCRYPTION_KEY
+              valueFrom: { secretKeyRef: { name: wap-app-secrets, key: SESSION_ENCRYPTION_KEY } }
+            - name: ADMIN_API_KEY
+              valueFrom: { secretKeyRef: { name: wap-app-secrets, key: ADMIN_API_KEY } }
+            - name: ANTHROPIC_API_KEY
+              valueFrom: { secretKeyRef: { name: wap-app-secrets, key: ANTHROPIC_API_KEY } }
+            - name: LANGFUSE_PUBLIC_KEY
+              valueFrom: { secretKeyRef: { name: wap-app-secrets, key: LANGFUSE_PUBLIC_KEY, optional: true } }
+            - name: LANGFUSE_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: wap-app-secrets, key: LANGFUSE_SECRET_KEY, optional: true } }
+            - name: SENTRY_DSN
+              valueFrom: { secretKeyRef: { name: wap-app-secrets, key: SENTRY_DSN, optional: true } }
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            # Liveness uses the cheap static /livez (no dependency checks), so a
+            # transient Redis/Postgres blip never restarts a healthy pod.
+            httpGet:
+              path: /livez
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
