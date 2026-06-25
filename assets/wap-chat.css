@@ -1,0 +1,569 @@
+/**
+ * WAP Chat Widget — Design-token CSS.
+ *
+ * All colours, spacing, and typography are expressed via CSS custom properties
+ * with the --wap- prefix. Override these on a container element or :root to
+ * achieve white-label theming without touching any rule definitions.
+ *
+ * Usage:
+ *   To theme for a specific product, add a data attribute to the root element
+ *   and define overrides in your product plugin stylesheet:
+ *
+ *     [data-wap-theme="my-product"] {
+ *         --wap-color-brand:       #e34a2e;
+ *         --wap-color-brand-dark:  #c73d25;
+ *     }
+ *
+ * @package GroupOne\WapClient
+ * @version 1.0.0
+ */
+
+/* ---------------------------------------------------------------------------
+   Design tokens (CSS custom properties)
+   --------------------------------------------------------------------------- */
+
+:root {
+    /* Brand colours */
+    --wap-color-brand:         #0073aa;
+    --wap-color-brand-dark:    #005177;
+    --wap-color-brand-light:   #e8f4fb;
+
+    /* Semantic colours */
+    --wap-color-bg:            #ffffff;
+    --wap-color-surface:       #f6f7f7;
+    --wap-color-surface-2:     #ededed;
+    --wap-color-border:        #dcdcde;
+    --wap-color-text:          #1d2327;
+    --wap-color-text-muted:    #646970;
+    --wap-color-text-inverse:  #ffffff;
+    --wap-color-error:         #d63638;
+    --wap-color-success:       #00a32a;
+    --wap-color-warning:       #dba617;
+
+    /* User message bubble */
+    --wap-color-user-bubble-bg:    var(--wap-color-brand);
+    --wap-color-user-bubble-text:  var(--wap-color-text-inverse);
+
+    /* Assistant message bubble */
+    --wap-color-assistant-bubble-bg:   var(--wap-color-surface);
+    --wap-color-assistant-bubble-text: var(--wap-color-text);
+
+    /* Typography */
+    --wap-font-family:      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    --wap-font-size-base:   0.9375rem;  /* 15px equivalent */
+    --wap-font-size-sm:     0.8125rem;  /* 13px equivalent */
+    --wap-font-size-xs:     0.75rem;    /* 12px equivalent */
+    --wap-font-size-code:   0.875em;
+    --wap-line-height:      1.6;
+
+    /* Spacing scale */
+    --wap-space-1:  0.25rem;   /*  4px */
+    --wap-space-2:  0.5rem;    /*  8px */
+    --wap-space-3:  0.75rem;   /* 12px */
+    --wap-space-4:  1rem;      /* 16px */
+    --wap-space-5:  1.25rem;   /* 20px */
+    --wap-space-6:  1.5rem;    /* 24px */
+    --wap-space-8:  2rem;      /* 32px */
+
+    /* Layout */
+    --wap-widget-max-width:  900px;
+    --wap-widget-height:     600px;
+    --wap-bubble-max-width:  75%;
+    --wap-border-radius:     0.5rem;
+    --wap-border-radius-sm:  0.25rem;
+    --wap-border-radius-lg:  1rem;
+
+    /* Shadows */
+    --wap-shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.07);
+    --wap-shadow-md:  0 2px 8px rgba(0, 0, 0, 0.1);
+
+    /* Transitions */
+    --wap-transition:  150ms ease-in-out;
+
+    /* Input */
+    --wap-input-border:        var(--wap-color-border);
+    --wap-input-border-focus:  var(--wap-color-brand);
+    --wap-input-bg:            var(--wap-color-bg);
+    --wap-input-radius:        var(--wap-border-radius-sm);
+    --wap-input-padding:       var(--wap-space-3) var(--wap-space-4);
+
+    /* Z-index */
+    --wap-z-base:    1;
+    --wap-z-overlay: 100;
+}
+
+/* ---------------------------------------------------------------------------
+   Base wrapper
+   --------------------------------------------------------------------------- */
+
+.wap-client-wrap {
+    box-sizing: border-box;
+    font-family: var(--wap-font-family);
+}
+
+.wap-chat-root {
+    display:          flex;
+    flex-direction:   column;
+    max-width:        var(--wap-widget-max-width);
+    height:           var(--wap-widget-height);
+    background-color: var(--wap-color-bg);
+    border:           1px solid var(--wap-color-border);
+    border-radius:    var(--wap-border-radius);
+    box-shadow:       var(--wap-shadow-md);
+    overflow:         hidden;
+    font-family:      var(--wap-font-family);
+    font-size:        var(--wap-font-size-base);
+    line-height:      var(--wap-line-height);
+    color:            var(--wap-color-text);
+}
+
+/* ---------------------------------------------------------------------------
+   Loading placeholder (shown before JS hydrates)
+   --------------------------------------------------------------------------- */
+
+.wap-chat-loading {
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    gap:             var(--wap-space-3);
+    height:          100%;
+    color:           var(--wap-color-text-muted);
+    font-size:       var(--wap-font-size-sm);
+}
+
+.wap-chat-loading__spinner {
+    display:       inline-block;
+    width:         1.25rem;
+    height:        1.25rem;
+    border:        2px solid var(--wap-color-border);
+    border-top-color: var(--wap-color-brand);
+    border-radius: 50%;
+    animation:     wap-spin 0.7s linear infinite;
+}
+
+@keyframes wap-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ---------------------------------------------------------------------------
+   Header bar
+   --------------------------------------------------------------------------- */
+
+.wap-chat__header {
+    display:          flex;
+    align-items:      center;
+    justify-content:  space-between;
+    padding:          var(--wap-space-3) var(--wap-space-4);
+    background-color: var(--wap-color-surface);
+    border-bottom:    1px solid var(--wap-color-border);
+    flex-shrink:      0;
+}
+
+/* ---------------------------------------------------------------------------
+   Status indicator
+   --------------------------------------------------------------------------- */
+
+.wap-chat__status {
+    font-size:   var(--wap-font-size-xs);
+    font-weight: 500;
+    color:       var(--wap-color-text-muted);
+    transition:  color var(--wap-transition);
+}
+
+.wap-chat__status--connected {
+    color: var(--wap-color-success);
+}
+
+.wap-chat__status--connecting {
+    color: var(--wap-color-warning);
+}
+
+.wap-chat__status--error {
+    color: var(--wap-color-error);
+}
+
+/* ---------------------------------------------------------------------------
+   Buttons
+   --------------------------------------------------------------------------- */
+
+.wap-chat__btn--ghost {
+    background:    transparent;
+    border:        1px solid var(--wap-color-border);
+    border-radius: var(--wap-border-radius-sm);
+    color:         var(--wap-color-text-muted);
+    cursor:        pointer;
+    font-size:     var(--wap-font-size-xs);
+    padding:       var(--wap-space-1) var(--wap-space-3);
+    transition:    border-color var(--wap-transition), color var(--wap-transition);
+}
+
+.wap-chat__btn--ghost:hover:not(:disabled) {
+    border-color: var(--wap-color-brand);
+    color:        var(--wap-color-brand);
+}
+
+.wap-chat__btn--ghost:disabled {
+    opacity: 0.5;
+    cursor:  not-allowed;
+}
+
+.wap-chat__delete-btn {
+    margin-left: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Messages area
+   --------------------------------------------------------------------------- */
+
+.wap-chat__messages {
+    flex:             1 1 auto;
+    overflow-y:       auto;
+    padding:          var(--wap-space-4);
+    display:          flex;
+    flex-direction:   column;
+    gap:              var(--wap-space-4);
+    scroll-behavior:  smooth;
+    background-color: var(--wap-color-bg);
+}
+
+/* Scrollbar styling (Webkit) */
+.wap-chat__messages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.wap-chat__messages::-webkit-scrollbar-thumb {
+    background-color: var(--wap-color-border);
+    border-radius:    3px;
+}
+
+/* ---------------------------------------------------------------------------
+   Message rows
+   --------------------------------------------------------------------------- */
+
+.wap-chat__message {
+    display:        flex;
+    flex-direction: column;
+    max-width:      100%;
+}
+
+/* User messages: right-aligned */
+.wap-chat__message--user {
+    align-items:    flex-end;
+    align-self:     flex-end;
+    max-width:      var(--wap-bubble-max-width);
+}
+
+/* Assistant messages: left-aligned */
+.wap-chat__message--assistant {
+    align-items:    flex-start;
+    align-self:     flex-start;
+    max-width:      var(--wap-bubble-max-width);
+}
+
+/* Error messages: full width, centred */
+.wap-chat__message--error {
+    align-items:    center;
+    align-self:     stretch;
+}
+
+/* ---------------------------------------------------------------------------
+   Bubbles
+   --------------------------------------------------------------------------- */
+
+.wap-chat__bubble {
+    border-radius: var(--wap-border-radius);
+    padding:       var(--wap-space-3) var(--wap-space-4);
+    box-shadow:    var(--wap-shadow-sm);
+    word-break:    break-word;
+    white-space:   pre-wrap;
+}
+
+.wap-chat__message--user .wap-chat__bubble {
+    background-color: var(--wap-color-user-bubble-bg);
+    color:            var(--wap-color-user-bubble-text);
+    border-bottom-right-radius: var(--wap-border-radius-sm);
+}
+
+.wap-chat__message--assistant .wap-chat__bubble {
+    background-color: var(--wap-color-assistant-bubble-bg);
+    color:            var(--wap-color-assistant-bubble-text);
+    border-bottom-left-radius: var(--wap-border-radius-sm);
+}
+
+.wap-chat__message--error .wap-chat__bubble {
+    background-color: #fde8e8;
+    color:            var(--wap-color-error);
+    font-size:        var(--wap-font-size-sm);
+    border:           1px solid #f9bebe;
+    width:            100%;
+    box-sizing:       border-box;
+}
+
+/* Text paragraphs inside assistant bubbles */
+.wap-chat__text {
+    margin: 0;
+}
+
+.wap-chat__text + .wap-chat__text {
+    margin-top: var(--wap-space-2);
+}
+
+/* Inline error inside an assistant bubble */
+.wap-chat__error-inline {
+    margin:     var(--wap-space-2) 0 0;
+    color:      var(--wap-color-error);
+    font-size:  var(--wap-font-size-sm);
+}
+
+/* ---------------------------------------------------------------------------
+   Typing indicator
+   --------------------------------------------------------------------------- */
+
+.wap-chat__typing {
+    display:     flex;
+    align-items: center;
+    gap:         4px;
+    padding:     var(--wap-space-1) 0;
+}
+
+.wap-chat__typing span {
+    display:       inline-block;
+    width:         7px;
+    height:        7px;
+    border-radius: 50%;
+    background-color: var(--wap-color-text-muted);
+    animation:    wap-typing-bounce 1.2s infinite ease-in-out;
+}
+
+.wap-chat__typing span:nth-child(2) { animation-delay: 0.2s; }
+.wap-chat__typing span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes wap-typing-bounce {
+    0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+    40%           { transform: scale(1);   opacity: 1;   }
+}
+
+/* ---------------------------------------------------------------------------
+   Routing indicator
+   --------------------------------------------------------------------------- */
+
+.wap-chat__routing {
+    font-size:  var(--wap-font-size-xs);
+    color:      var(--wap-color-text-muted);
+    font-style: italic;
+    margin-bottom: var(--wap-space-2);
+}
+
+/* ---------------------------------------------------------------------------
+   Tool-use action cards (collapsible <details>)
+   --------------------------------------------------------------------------- */
+
+.wap-chat__action-card {
+    border:        1px solid var(--wap-color-border);
+    border-radius: var(--wap-border-radius-sm);
+    margin:        var(--wap-space-2) 0;
+    font-size:     var(--wap-font-size-sm);
+    overflow:      hidden;
+    background-color: var(--wap-color-bg);
+}
+
+.wap-chat__action-card--done > summary .wap-chat__action-label::before {
+    content: "✓ ";
+    color:   var(--wap-color-success);
+}
+
+.wap-chat__action-summary {
+    display:      flex;
+    align-items:  center;
+    justify-content: space-between;
+    cursor:       pointer;
+    padding:      var(--wap-space-2) var(--wap-space-3);
+    background-color: var(--wap-color-surface);
+    user-select:  none;
+    list-style:   none; /* Remove native triangle */
+}
+
+/* Remove native <details> marker in all browsers */
+.wap-chat__action-summary::-webkit-details-marker { display: none; }
+.wap-chat__action-summary::marker               { display: none; }
+
+.wap-chat__action-label {
+    font-weight: 500;
+    color:       var(--wap-color-text);
+}
+
+.wap-chat__action-toggle {
+    color:       var(--wap-color-text-muted);
+    font-size:   var(--wap-font-size-xs);
+    transition:  transform var(--wap-transition);
+}
+
+.wap-chat__action-toggle::after {
+    content: "▾";
+}
+
+details[open] .wap-chat__action-toggle {
+    transform: rotate(-180deg);
+}
+
+.wap-chat__action-body {
+    padding:    var(--wap-space-3);
+    display:    flex;
+    flex-direction: column;
+    gap:        var(--wap-space-2);
+}
+
+.wap-chat__action-input,
+.wap-chat__action-result {
+    display:        flex;
+    flex-direction: column;
+    gap:            var(--wap-space-1);
+}
+
+.wap-chat__action-result {
+    border-top:  1px solid var(--wap-color-border);
+    padding-top: var(--wap-space-2);
+}
+
+.wap-chat__action-json {
+    background-color: var(--wap-color-surface-2);
+    border:           1px solid var(--wap-color-border);
+    border-radius:    var(--wap-border-radius-sm);
+    font-family:      ui-monospace, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size:        var(--wap-font-size-code);
+    margin:           0;
+    max-height:       200px;
+    overflow:         auto;
+    padding:          var(--wap-space-2) var(--wap-space-3);
+    white-space:      pre-wrap;
+    word-break:       break-word;
+}
+
+/* ---------------------------------------------------------------------------
+   Input area
+   --------------------------------------------------------------------------- */
+
+.wap-chat__input-area {
+    display:          flex;
+    align-items:      flex-end;
+    gap:              var(--wap-space-3);
+    padding:          var(--wap-space-3) var(--wap-space-4);
+    background-color: var(--wap-color-surface);
+    border-top:       1px solid var(--wap-color-border);
+    flex-shrink:      0;
+}
+
+.wap-chat__input {
+    flex:             1;
+    background-color: var(--wap-input-bg);
+    border:           1px solid var(--wap-input-border);
+    border-radius:    var(--wap-input-radius);
+    color:            var(--wap-color-text);
+    font-family:      var(--wap-font-family);
+    font-size:        var(--wap-font-size-base);
+    line-height:      var(--wap-line-height);
+    padding:          var(--wap-input-padding);
+    resize:           vertical;
+    min-height:       calc(var(--wap-line-height) * var(--wap-font-size-base) + 2 * var(--wap-space-3));
+    max-height:       10rem;
+    transition:       border-color var(--wap-transition), box-shadow var(--wap-transition);
+}
+
+.wap-chat__input:focus {
+    border-color: var(--wap-input-border-focus);
+    box-shadow:   0 0 0 2px color-mix(in srgb, var(--wap-color-brand) 20%, transparent);
+    outline:      none;
+}
+
+.wap-chat__input::placeholder {
+    color: var(--wap-color-text-muted);
+}
+
+.wap-chat__input:disabled {
+    background-color: var(--wap-color-surface-2);
+    cursor:           not-allowed;
+    opacity:          0.7;
+}
+
+.wap-chat__send-btn {
+    background-color: var(--wap-color-brand);
+    border:           none;
+    border-radius:    var(--wap-border-radius-sm);
+    color:            var(--wap-color-text-inverse);
+    cursor:           pointer;
+    flex-shrink:      0;
+    font-family:      var(--wap-font-family);
+    font-size:        var(--wap-font-size-base);
+    font-weight:      500;
+    padding:          var(--wap-space-3) var(--wap-space-5);
+    transition:       background-color var(--wap-transition), opacity var(--wap-transition);
+    white-space:      nowrap;
+}
+
+.wap-chat__send-btn:hover:not(:disabled) {
+    background-color: var(--wap-color-brand-dark);
+}
+
+.wap-chat__send-btn:disabled {
+    opacity: 0.6;
+    cursor:  not-allowed;
+}
+
+/* Focus styles for accessibility */
+.wap-chat__send-btn:focus-visible,
+.wap-chat__input:focus-visible,
+.wap-chat__action-summary:focus-visible,
+.wap-chat__btn--ghost:focus-visible {
+    outline:        2px solid var(--wap-color-brand);
+    outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Notices
+   --------------------------------------------------------------------------- */
+
+.wap-chat__notice {
+    padding:       var(--wap-space-4);
+    border-radius: var(--wap-border-radius-sm);
+    font-size:     var(--wap-font-size-sm);
+    text-align:    center;
+}
+
+.wap-chat__notice--success {
+    background-color: #edfaef;
+    border:           1px solid #b3e6bc;
+    color:            var(--wap-color-success);
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 600px) {
+    .wap-chat-root {
+        height:        calc(100vh - 120px); /* Account for WP admin bar */
+        max-width:     100%;
+        border-left:   none;
+        border-right:  none;
+        border-radius: 0;
+    }
+
+    .wap-chat__message--user,
+    .wap-chat__message--assistant {
+        max-width: 90%;
+    }
+
+    .wap-chat__action-json {
+        max-height: 120px;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   WordPress admin bar spacing
+   --------------------------------------------------------------------------- */
+
+@media screen and (max-width: 782px) {
+    .wap-client-wrap {
+        margin-top: var(--wap-space-4);
+    }
+}
