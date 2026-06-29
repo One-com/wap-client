@@ -171,16 +171,16 @@ class ChatWidget
         }
 
         ?>
-        <div class="wrap wap-client-wrap">
+        <div class="wrap wap-client-wrap gv-activated">
             <h1><?php echo esc_html($page['page_title']); ?></h1>
             <div
                 id="wap-chat-root"
                 class="wap-chat-root"
                 data-product="<?php echo esc_attr($page['product']); ?>"
             >
-                <div class="wap-chat-loading" aria-live="polite">
-                    <span class="wap-chat-loading__spinner" aria-hidden="true"></span>
-                    <span><?php esc_html_e('Connecting to AI assistant…', 'wap-client'); ?></span>
+                <div class="gv-loader-container" aria-live="polite">
+                    <gv-loader src="https://gravity.group-cdn.one/v5.40.0/loaders/spinner.svg"></gv-loader>
+                    <p><?php esc_html_e('Connecting to AI assistant…', 'wap-client'); ?></p>
                 </div>
             </div>
         </div>
@@ -223,9 +223,24 @@ class ChatWidget
         $base_url = WAP_CLIENT_URL;
 
         wp_enqueue_style(
+            'gravity-design-system',
+            'https://gravity.group-cdn.one/v5.40.0/css/brands/group-one.min.css',
+            [],
+            null
+        );
+
+        wp_enqueue_script(
+            'gravity-design-system-js',
+            'https://gravity.group-cdn.one/v5.40.0/index.umd.js',
+            [],
+            null,
+            true
+        );
+
+        wp_enqueue_style(
             'wap-client-chat-' . $menu_slug,
             $base_url . 'assets/wap-chat.css',
-            [],
+            [ 'gravity-design-system' ],
             $version
         );
 

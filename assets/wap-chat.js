@@ -21,8 +21,6 @@
     // Config (provided by wp_localize_script in class-chat-widget.php)
     // -------------------------------------------------------------------------
 
-    // Config is read live from the global so a host (e.g. the WAP admin tester)
-    // can set/replace it and re-run init() to (re)connect with new values.
     let cfg = window.WapClientConfig || {};
     let i18n = cfg.i18n || {};
 
@@ -42,11 +40,14 @@
     /** @type {boolean} Whether we are currently waiting for a response. */
     let isStreaming = false;
 
+    /** @type {number} Counter for generating unique accordion IDs. */
+    let accCounter = 0;
+
     // -------------------------------------------------------------------------
     // DOM references — resolved after DOMContentLoaded.
     // -------------------------------------------------------------------------
 
-    let rootEl, messagesEl, inputEl, sendBtn, statusEl, deleteDataBtn;
+    let rootEl, messagesEl, chatListEl, inputEl, sendBtn, indicatorDotEl, statusTextEl, deleteDataBtn;
 
     // -------------------------------------------------------------------------
     // Initialisation
@@ -54,28 +55,20 @@
 
     document.addEventListener('DOMContentLoaded', init);
 
-    // Expose init so standalone hosts can (re)connect after setting
-    // window.WapClientConfig (e.g. the WAP admin chat tester switching roles).
-    // On a WordPress page this is unused — DOMContentLoaded drives init() once.
     window.WapChat = window.WapChat || {};
     window.WapChat.init = init;
 
     /**
      * Initialise the chat widget.
      * Builds the DOM inside #wap-chat-root, loads history, and wires events.
-     *
-     * Re-runnable: re-reads window.WapClientConfig and rebuilds the UI, so a host
-     * can call WapChat.init() again to reconnect with new configuration.
      */
     function init() {
         rootEl = document.getElementById('wap-chat-root');
         if (!rootEl) return;
 
-        // Re-read config (a host may have replaced it before re-initialising).
         cfg = window.WapClientConfig || {};
         i18n = cfg.i18n || {};
 
-        // Drop any in-flight stream / token from a previous connection.
         if (currentAbortController) {
             try { currentAbortController.abort(); } catch (e) { /* ignore */ }
         }
@@ -85,7 +78,6 @@
         buildUI();
         wireEvents();
 
-        // loadHistory() runs after authenticate() resolves and sets cfg.conversationId.
         authenticate(false).then(function () { loadHistory(); }).catch(function () {});
     }
 
@@ -94,45 +86,60 @@
     // -------------------------------------------------------------------------
 
     /**
-     * Build and inject the chat widget HTML structure.
-     * Replaces the loading placeholder injected by PHP.
+     * Build and inject the chat widget HTML structure using Gravity components.
      */
     function buildUI() {
         rootEl.innerHTML = '';
 
         // Header bar.
         const header = el('div', 'wap-chat__header');
-        statusEl = el('span', 'wap-chat__status wap-chat__status--connecting');
-        statusEl.textContent = i18n.reconnecting || 'Connecting…';
-        header.appendChild(statusEl);
 
-        // Delete data button (GDPR).
-        deleteDataBtn = el('button', 'wap-chat__delete-btn wap-chat__btn--ghost');
+        // Status indicator — gv-text-indicator with dot states.
+        const statusWrapper = el('div', 'gv-text-indicator');
+        indicatorDotEl = el('div', 'gv-indicator gv-state-busy');
+        statusTextEl = el('span', '');
+        statusTextEl.textContent = i18n.reconnecting || 'Connecting…';
+        statusWrapper.appendChild(indicatorDotEl);
+        statusWrapper.appendChild(statusTextEl);
+        header.appendChild(statusWrapper);
+
+        // Delete data button (GDPR) — gv-button secondary condensed.
+        deleteDataBtn = el('button', 'gv-button gv-button-secondary gv-mode-condensed');
         deleteDataBtn.type = 'button';
         deleteDataBtn.textContent = i18n.deleteData || 'Delete my data';
         deleteDataBtn.setAttribute('aria-label', i18n.deleteData || 'Delete my data');
         header.appendChild(deleteDataBtn);
 
-        // Messages area.
+        // Messages scroll container.
         messagesEl = el('div', 'wap-chat__messages');
-        messagesEl.setAttribute('role', 'log');
-        messagesEl.setAttribute('aria-live', 'polite');
         messagesEl.setAttribute('aria-label', 'Chat messages');
+
+        // gv-chat list inside the scroll container.
+        const gvChat = el('section', 'gv-chat');
+        chatListEl = el('ul', 'gv-chat-list');
+        gvChat.setAttribute('role', 'log');
+        gvChat.setAttribute('aria-live', 'polite');
+        gvChat.appendChild(chatListEl);
+        messagesEl.appendChild(gvChat);
 
         // Input area.
         const inputArea = el('div', 'wap-chat__input-area');
 
-        inputEl = el('textarea', 'wap-chat__input');
+        // Textarea wrapped in gv-form-option.
+        const formOption = el('div', 'gv-form-option wap-chat__textarea-wrap');
+        inputEl = el('textarea', 'gv-input gv-input-textarea');
         inputEl.setAttribute('rows', '3');
         inputEl.setAttribute('placeholder', i18n.placeholder || 'Ask the AI assistant…');
         inputEl.setAttribute('aria-label', i18n.placeholder || 'Ask the AI assistant…');
+        formOption.appendChild(inputEl);
 
-        sendBtn = el('button', 'wap-chat__send-btn');
+        // Send button — gv-button primary condensed.
+        sendBtn = el('button', 'gv-button gv-button-primary gv-mode-condensed');
         sendBtn.type = 'button';
         sendBtn.textContent = i18n.send || 'Send';
         sendBtn.setAttribute('aria-label', i18n.send || 'Send');
 
-        inputArea.appendChild(inputEl);
+        inputArea.appendChild(formOption);
         inputArea.appendChild(sendBtn);
 
         rootEl.appendChild(header);
@@ -147,7 +154,6 @@
         sendBtn.addEventListener('click', handleSend);
 
         inputEl.addEventListener('keydown', function (e) {
-            // Ctrl+Enter or Cmd+Enter submits.
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
                 handleSend();
@@ -161,30 +167,15 @@
     // Authentication
     // -------------------------------------------------------------------------
 
-    /**
-     * Obtain a fresh WAP session token.
-     *
-     * Concurrent callers share the same in-flight Promise — no polling needed.
-     *
-     * The token is sourced via a pluggable strategy so the same widget can run
-     * both on a WordPress site and in standalone hosts (e.g. the WAP admin):
-     *
-     *   - default ('wp'): POST to WordPress admin-ajax.php (action=wap_client_auth).
-     *     The App Password never reaches the browser and CORS is sidestepped.
-     *   - 'direct': POST the WP connection details (entered by the caller) as JSON
-     *     to cfg.authEndpoint, which proxies to the WAP backend's /auth/session.
-     *
-     * Set cfg.authStrategy = 'direct' to opt in; everything downstream of auth
-     * (streaming, history, rendering) is strategy-agnostic.
-     *
-     * @param {boolean} forceNew Set true when re-provisioning after a 401
-     *                           (revokes the stored App Password server-side,
-     *                           where applicable).
-     * @returns {Promise<string>} Resolves with the new session token.
-     */
     /** Whether the next auth call should revoke the stored App Password. */
     let pendingForceNew = false;
 
+    /**
+     * Obtain a fresh WAP session token.
+     *
+     * @param {boolean} forceNew Revoke stored App Password and re-provision.
+     * @returns {Promise<string>}
+     */
     function authenticate(forceNew) {
         if (forceNew) pendingForceNew = true;
         if (authPromise) return authPromise;
@@ -201,7 +192,6 @@
         authPromise = request
             .then(function (res) { return res.json(); })
             .then(function (json) {
-                // Both strategies normalise to { token, conversationId }.
                 const data = json.success === false
                     ? throwAuthError(json)
                     : (json.data || json);
@@ -224,12 +214,6 @@
         return authPromise;
     }
 
-    /**
-     * Raise an Error from a failed WordPress AJAX envelope ({success:false}).
-     *
-     * @param {Object} json The parsed AJAX response.
-     * @returns {never}
-     */
     function throwAuthError(json) {
         throw new Error(
             json.data && json.data.message
@@ -238,12 +222,6 @@
         );
     }
 
-    /**
-     * Default strategy: authenticate via WordPress admin-ajax.php.
-     *
-     * @param {boolean} forceNew Revoke the stored App Password and re-provision.
-     * @returns {Promise<Response>}
-     */
     function authRequestWordPress(forceNew) {
         const data = new URLSearchParams({
             action:      'wap_client_auth',
@@ -260,15 +238,6 @@
         });
     }
 
-    /**
-     * Direct strategy: POST WP connection details as JSON to cfg.authEndpoint.
-     *
-     * Used by standalone hosts (e.g. the WAP admin chat tester) where there is
-     * no WordPress AJAX layer. The endpoint itself enforces access control.
-     *
-     * @param {boolean} forceNew Request a fresh session (re-auth after 401).
-     * @returns {Promise<Response>}
-     */
     function authRequestDirect(forceNew) {
         const body = {
             product:            cfg.product || '',
@@ -293,10 +262,6 @@
     // History
     // -------------------------------------------------------------------------
 
-    /**
-     * Load conversation history from the WAP backend on widget init.
-     * Renders all previous messages in the correct order.
-     */
     function loadHistory() {
         if (!sessionToken || !cfg.conversationId) return;
 
@@ -327,7 +292,6 @@
                 scrollToBottom();
             })
             .catch(function () {
-                // History load failure is non-fatal; widget still works.
                 setStatus('connected');
             });
     }
@@ -336,9 +300,6 @@
     // Sending messages
     // -------------------------------------------------------------------------
 
-    /**
-     * Handle the send button click / keyboard shortcut.
-     */
     function handleSend() {
         const message = inputEl.value.trim();
         if (!message || isStreaming) return;
@@ -355,14 +316,6 @@
         }
     }
 
-    /**
-     * Send a message to the WAP backend and stream the response.
-     *
-     * Uses fetch with a ReadableStream body reader instead of the native
-     * EventSource API because POST with a body is not supported by EventSource.
-     *
-     * @param {string} message The user message to send.
-     */
     function sendMessage(message) {
         isStreaming = true;
         setSendDisabled(true);
@@ -389,7 +342,6 @@
         })
             .then(function (res) {
                 if (res.status === 401) {
-                    // Token expired or revoked — re-auth and retry.
                     assistantEl.remove();
                     return authenticate(true).then(function () { sendMessage(message); });
                 }
@@ -419,68 +371,46 @@
     // SSE stream reader
     // -------------------------------------------------------------------------
 
-    /**
-     * Read and process a WAP SSE stream from a ReadableStream.
-     *
-     * Handles the following event types (from spec section 5.5):
-     *   text_delta   — streamed text tokens from the LLM
-     *   tool_use     — agent is calling a tool
-     *   tool_result  — tool execution result
-     *   message_end  — stream complete (includes token usage)
-     *   error        — error event from the backend
-     *
-     * @param {ReadableStream} body       The response body stream.
-     * @param {HTMLElement}    assistantEl The assistant message container to fill.
-     * @returns {Promise<void>}
-     */
     function readSSEStream(body, assistantEl) {
         const reader   = body.getReader();
         const decoder  = new TextDecoder();
         let   buffer   = '';
-        let   textNode = null; // <p> element for accumulating text_delta chunks.
+        let   textNode = null;
 
         /**
-         * Find or create the text paragraph inside the assistant bubble.
-         * New tool_use events get their own block; text continues in a <p>.
+         * Find or create the text paragraph inside the assistant message.
+         * Uses gv-chat-message-body for Gravity chat styling.
          *
          * @returns {HTMLParagraphElement}
          */
         function getOrCreateTextNode() {
             if (!textNode) {
-                textNode = el('p', 'wap-chat__text');
-                assistantEl.querySelector('.wap-chat__bubble').appendChild(textNode);
+                textNode = el('p', 'gv-chat-message-body');
+                assistantEl.appendChild(textNode);
             }
             return textNode;
         }
 
-        /**
-         * Process a single parsed SSE event object.
-         *
-         * @param {Object} event Parsed JSON from the SSE data field.
-         */
         function processEvent(event) {
             switch (event.type) {
                 case 'message_start':
-                    // Sync the real backend conversationId so history calls use the correct thread_id.
                     if (event.conversationId) cfg.conversationId = event.conversationId;
                     break;
 
                 case 'routing':
-                    // Orchestrator routing decision — render as a subtle info line.
                     if (event.routing) {
-                        textNode = null; // Routing info starts a new visual block.
+                        textNode = null;
                         const routingEl = el('div', 'wap-chat__routing');
                         routingEl.textContent = event.routing === 'multi'
                             ? '⟳ Consulting multiple specialists…'
                             : '';
                         if (routingEl.textContent) {
-                            assistantEl.querySelector('.wap-chat__bubble').appendChild(routingEl);
+                            assistantEl.appendChild(routingEl);
                         }
                     }
                     break;
 
                 case 'text_delta':
-                    // Append streamed text chunk. Remove typing indicator on first token.
                     if (event.delta) {
                         const typingEl = assistantEl.querySelector('.wap-chat__typing');
                         if (typingEl) typingEl.remove();
@@ -490,19 +420,16 @@
                     break;
 
                 case 'tool_use':
-                    // Agent is calling a tool — render as a collapsible action card.
-                    textNode = null; // Next text will go in a new <p>.
+                    textNode = null;
                     appendToolUse(assistantEl, event.tool || '', event.input || {});
                     break;
 
                 case 'tool_result':
-                    // Tool execution result — update the matching action card.
                     appendToolResult(assistantEl, event.tool || '', event.output || '');
-                    textNode = null; // Text after a tool result starts fresh.
+                    textNode = null;
                     break;
 
                 case 'message_end':
-                    // Stream complete. Remove typing indicator if nothing was emitted.
                     const doneTyping = assistantEl.querySelector('.wap-chat__typing');
                     if (doneTyping) doneTyping.remove();
                     break;
@@ -512,22 +439,14 @@
                     break;
 
                 default:
-                    // Unknown event type — silently ignore for forward-compatibility.
                     break;
             }
         }
 
-        /**
-         * Parse the accumulated SSE buffer into individual events and process them.
-         *
-         * @param {string} chunk Raw text chunk from the stream.
-         * @returns {boolean} true if the [DONE] sentinel was received.
-         */
         function parseChunk(chunk) {
             buffer += chunk;
-            // SSE spec: events are separated by blank lines (\n\n).
             const events = buffer.split('\n\n');
-            buffer = events.pop() || ''; // Keep any incomplete event.
+            buffer = events.pop() || '';
 
             for (let ei = 0; ei < events.length; ei++) {
                 const lines = events[ei].split('\n');
@@ -547,7 +466,6 @@
             return false;
         }
 
-        // Read the stream chunk by chunk; stop when [DONE] is received.
         function pump() {
             return reader.read().then(function (result) {
                 if (result.done) return;
@@ -568,172 +486,180 @@
     // -------------------------------------------------------------------------
 
     /**
-     * Append a user message bubble to the messages list.
+     * Append a user message — gv-chat-message gv-chat-outgoing.
      *
-     * @param {string} text Message content.
-     * @returns {HTMLElement} The appended element.
+     * @param {string} text
+     * @returns {HTMLLIElement}
      */
     function appendUserMessage(text) {
-        const wrapper = el('div', 'wap-chat__message wap-chat__message--user');
-        const bubble  = el('div', 'wap-chat__bubble');
-        bubble.textContent = text;
-        wrapper.appendChild(bubble);
-        messagesEl.appendChild(wrapper);
+        const li = el('li', 'gv-chat-message gv-chat-outgoing');
+        const p  = el('p', 'gv-chat-message-body');
+        p.textContent = text;
+        li.appendChild(p);
+        chatListEl.appendChild(li);
         scrollToBottom();
-        return wrapper;
+        return li;
     }
 
     /**
-     * Append an assistant message bubble placeholder (filled by SSE stream).
+     * Append an assistant message placeholder with typing indicator.
      *
-     * @returns {HTMLElement} The appended wrapper element (passed to stream reader).
+     * @returns {HTMLLIElement}
      */
     function appendAssistantPlaceholder() {
-        const wrapper = el('div', 'wap-chat__message wap-chat__message--assistant');
-        const bubble  = el('div', 'wap-chat__bubble');
-        // Typing indicator.
+        const li = el('li', 'gv-chat-message gv-chat-incoming');
         const typing = el('div', 'wap-chat__typing');
         typing.setAttribute('aria-label', 'AI is thinking');
         typing.innerHTML = '<span></span><span></span><span></span>';
-        bubble.appendChild(typing);
-        wrapper.appendChild(bubble);
-        messagesEl.appendChild(wrapper);
+        li.appendChild(typing);
+        chatListEl.appendChild(li);
         scrollToBottom();
-        return wrapper;
+        return li;
     }
 
     /**
-     * Append a completed assistant message (used when rendering history).
+     * Append a completed assistant message (history render).
      *
-     * @param {string} text Full message content.
-     * @returns {HTMLElement} The appended element.
+     * @param {string} text
+     * @returns {HTMLLIElement}
      */
     function appendAssistantMessage(text) {
-        const wrapper = el('div', 'wap-chat__message wap-chat__message--assistant');
-        const bubble  = el('div', 'wap-chat__bubble');
-        const p       = el('p', 'wap-chat__text');
+        const li = el('li', 'gv-chat-message gv-chat-incoming');
+        const p  = el('p', 'gv-chat-message-body');
         p.textContent = text;
-        bubble.appendChild(p);
-        wrapper.appendChild(bubble);
-        messagesEl.appendChild(wrapper);
-        return wrapper;
+        li.appendChild(p);
+        chatListEl.appendChild(li);
+        return li;
     }
 
     /**
-     * Append an error message to an existing assistant bubble.
+     * Append an inline error to an existing assistant message.
      *
-     * @param {HTMLElement} assistantEl  The assistant wrapper element.
-     * @param {string}      errorMessage Error text to display.
+     * @param {HTMLLIElement} assistantEl
+     * @param {string}        errorMessage
      */
     function appendErrorToAssistant(assistantEl, errorMessage) {
-        // Remove typing indicator if still present.
         const typing = assistantEl.querySelector('.wap-chat__typing');
         if (typing) typing.remove();
 
         const errEl = el('p', 'wap-chat__error-inline');
         errEl.textContent = errorMessage;
-        assistantEl.querySelector('.wap-chat__bubble').appendChild(errEl);
+        assistantEl.appendChild(errEl);
     }
 
     /**
-     * Append a standalone error message.
+     * Append a standalone error as a gv-notice gv-notice-alert.
      *
-     * @param {string} errorMessage Error text to display.
+     * @param {string} errorMessage
      */
     function appendErrorMessage(errorMessage) {
-        const wrapper = el('div', 'wap-chat__message wap-chat__message--error');
-        wrapper.setAttribute('role', 'alert');
-        const bubble = el('div', 'wap-chat__bubble');
-        bubble.textContent = errorMessage;
-        wrapper.appendChild(bubble);
-        messagesEl.appendChild(wrapper);
+        const li = el('li', '');
+        li.setAttribute('role', 'alert');
+
+        const notice = el('div', 'gv-notice gv-notice-alert gv-mode-condensed');
+        const icon   = gvIcon('https://gravity.group-cdn.one/v5.40.0/icons/error.svg', 'gv-notice-icon');
+        const content = el('p', 'gv-notice-content');
+        content.textContent = errorMessage;
+        notice.appendChild(icon);
+        notice.appendChild(content);
+        li.appendChild(notice);
+
+        chatListEl.appendChild(li);
         scrollToBottom();
     }
 
     /**
-     * Append a collapsible tool-use card to an assistant bubble.
+     * Append a collapsible tool-use card using the Gravity accordion component.
      *
-     * The card shows the tool name and is expanded to show the input params.
-     * It will be updated by appendToolResult() when the result arrives.
-     *
-     * @param {HTMLElement} assistantEl Parent assistant wrapper element.
-     * @param {string}      toolName    MCP tool name.
-     * @param {Object}      toolInput   Tool input parameters.
+     * @param {HTMLLIElement} assistantEl
+     * @param {string}        toolName
+     * @param {Object}        toolInput
      */
     function appendToolUse(assistantEl, toolName, toolInput) {
-        const card     = el('details', 'wap-chat__action-card');
-        card.dataset.tool = toolName;
+        accCounter++;
+        const triggerId = 'wap-acc-trigger-' + accCounter;
+        const bodyId    = 'wap-acc-body-' + accCounter;
 
-        const summary = el('summary', 'wap-chat__action-summary');
-        const label   = el('span', 'wap-chat__action-label');
-        label.textContent = (i18n.actionLabel || 'Action') + ': ' + toolName;
-        const toggle  = el('span', 'wap-chat__action-toggle');
-        toggle.setAttribute('aria-hidden', 'true');
-        summary.appendChild(label);
-        summary.appendChild(toggle);
+        const accordion = el('div', 'gv-accordion');
+        accordion.dataset.tool = toolName;
 
-        const body = el('div', 'wap-chat__action-body');
+        const item   = el('div', 'gv-acc-item');
+        const header = el('h4', 'gv-acc-header');
 
-        const inputSection = el('div', 'wap-chat__action-input');
-        const inputLabel   = el('strong', '');
+        const trigger = el('button', 'gv-acc-trigger gv-expanded');
+        trigger.id = triggerId;
+        trigger.type = 'button';
+        trigger.setAttribute('aria-expanded', 'true');
+        trigger.setAttribute('aria-controls', bodyId);
+
+        const title = el('span', 'gv-acc-title');
+        title.textContent = (i18n.actionLabel || 'Action') + ': ' + toolName;
+        trigger.appendChild(title);
+
+        // Toggle expand/collapse on click.
+        trigger.addEventListener('click', function () {
+            const expanded = trigger.getAttribute('aria-expanded') === 'true';
+            trigger.setAttribute('aria-expanded', String(!expanded));
+            trigger.classList.toggle('gv-expanded', !expanded);
+            accBody.classList.toggle('gv-hidden', expanded);
+        });
+
+        header.appendChild(trigger);
+
+        const accBody = el('div', 'gv-acc-body');
+        accBody.id = bodyId;
+        accBody.setAttribute('role', 'region');
+        accBody.setAttribute('aria-labelledby', triggerId);
+
+        const content    = el('div', 'gv-acc-content');
+        const inputLabel = el('strong', '');
         inputLabel.textContent = 'Input:';
-        const inputPre     = el('pre', 'wap-chat__action-json');
+        const inputPre   = el('pre', 'wap-chat__action-json');
         inputPre.textContent = JSON.stringify(toolInput, null, 2);
-        inputSection.appendChild(inputLabel);
-        inputSection.appendChild(inputPre);
+        content.appendChild(inputLabel);
+        content.appendChild(inputPre);
 
-        body.appendChild(inputSection);
-        card.appendChild(summary);
-        card.appendChild(body);
-
-        assistantEl.querySelector('.wap-chat__bubble').appendChild(card);
+        accBody.appendChild(content);
+        item.appendChild(header);
+        item.appendChild(accBody);
+        accordion.appendChild(item);
+        assistantEl.appendChild(accordion);
     }
 
     /**
-     * Update an existing tool-use card with the execution result.
+     * Update an existing tool-use accordion with the execution result.
      *
-     * Finds the card by tool name and appends the result section.
-     *
-     * @param {HTMLElement} assistantEl Parent assistant wrapper element.
-     * @param {string}      toolName    MCP tool name (matches the card's data-tool).
-     * @param {string|Object} output    Tool execution output.
+     * @param {HTMLLIElement} assistantEl
+     * @param {string}        toolName
+     * @param {string|Object} output
      */
     function appendToolResult(assistantEl, toolName, output) {
-        // Find the most recent card for this tool (last match, in case same tool is called twice).
-        const cards = assistantEl.querySelectorAll('.wap-chat__action-card[data-tool="' + toolName + '"]');
-        const card  = cards.length ? cards[cards.length - 1] : null;
+        const accordions = assistantEl.querySelectorAll('.gv-accordion[data-tool="' + toolName + '"]');
+        const accordion  = accordions.length ? accordions[accordions.length - 1] : null;
+        if (!accordion) return;
 
-        if (!card) return;
+        const content = accordion.querySelector('.gv-acc-content');
+        if (!content) return;
 
-        const body = card.querySelector('.wap-chat__action-body');
-        if (!body) return;
-
-        const resultSection = el('div', 'wap-chat__action-result');
-        const resultLabel   = el('strong', '');
+        const resultLabel = el('strong', '');
         resultLabel.textContent = 'Result:';
-        const resultPre     = el('pre', 'wap-chat__action-json');
+        const resultPre = el('pre', 'wap-chat__action-json');
+        resultPre.textContent = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
+        content.appendChild(resultLabel);
+        content.appendChild(resultPre);
 
-        const outputStr = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
-        resultPre.textContent = outputStr;
-
-        resultSection.appendChild(resultLabel);
-        resultSection.appendChild(resultPre);
-        body.appendChild(resultSection);
-
-        // Mark the card as completed.
-        card.classList.add('wap-chat__action-card--done');
+        // Prefix the title with a checkmark once the result arrives.
+        const title = accordion.querySelector('.gv-acc-title');
+        if (title && !title.dataset.done) {
+            title.dataset.done = '1';
+            title.textContent = '✓ ' + title.textContent;
+        }
     }
 
     // -------------------------------------------------------------------------
     // GDPR
     // -------------------------------------------------------------------------
 
-    /**
-     * Handle the "Delete my data" button click.
-     *
-     * Step 1: POST /api/v1/me/data/erase directly from JS (Bearer token, no PHP relay).
-     * Step 2: POST to wap_client_delete_data AJAX to clean up local App Passwords.
-     */
     function handleDeleteData() {
         const confirmed = window.confirm(
             i18n.deleteConfirm ||
@@ -756,18 +682,10 @@
             },
         })
             .then(function (res) {
-                if (res.status === 401) {
-                    // Session already gone — still clean up locally.
-                    return;
-                }
-                if (!res.ok) {
-                    throw new Error('HTTP ' + res.status);
-                }
+                if (res.status === 401) return;
+                if (!res.ok) throw new Error('HTTP ' + res.status);
             })
             .then(function () {
-                // Clean up local WordPress state (App Passwords) server-side.
-                // Standalone hosts (direct strategy) have no WP AJAX layer to
-                // clean up, so the backend erase above is the whole story.
                 if (cfg.authStrategy === 'direct') return null;
 
                 const data = new URLSearchParams({
@@ -784,12 +702,26 @@
                 if (json && json.success === false) {
                     throw new Error(json.data && json.data.message ? json.data.message : (i18n.errorGeneric || 'Delete failed'));
                 }
+
                 sessionToken = '';
+
+                // Clear message list and rebuild the gv-chat structure.
                 messagesEl.innerHTML = '';
-                const notice = el('div', 'wap-chat__notice wap-chat__notice--success');
+                const gvChat = el('section', 'gv-chat');
+                chatListEl = el('ul', 'gv-chat-list');
+                gvChat.appendChild(chatListEl);
+                messagesEl.appendChild(gvChat);
+
+                // Show success notice — gv-notice gv-notice-success.
+                const notice  = el('div', 'gv-notice gv-notice-success');
                 notice.setAttribute('role', 'status');
-                notice.textContent = i18n.deleteSuccess || 'Your data has been deleted. Reload the page to resume.';
+                const icon    = gvIcon('https://gravity.group-cdn.one/v5.40.0/icons/check_circle.svg', 'gv-notice-icon');
+                const content = el('p', 'gv-notice-content');
+                content.textContent = i18n.deleteSuccess || 'Your data has been deleted. Reload the page to resume.';
+                notice.appendChild(icon);
+                notice.appendChild(content);
                 messagesEl.appendChild(notice);
+
                 setSendDisabled(true);
                 deleteDataBtn.setAttribute('disabled', 'disabled');
             })
@@ -803,10 +735,10 @@
     // -------------------------------------------------------------------------
 
     /**
-     * Create a DOM element with a class name.
+     * Create a DOM element with optional class name.
      *
-     * @param {string} tag   HTML tag name.
-     * @param {string} cls   CSS class name (empty string for no class).
+     * @param {string} tag
+     * @param {string} cls
      * @returns {HTMLElement}
      */
     function el(tag, cls) {
@@ -816,30 +748,51 @@
     }
 
     /**
-     * Set the connection status indicator text and modifier class.
+     * Create a <gv-icon> custom element.
      *
-     * @param {'connected'|'connecting'|'error'} state Status state.
+     * @param {string} src CDN URL of the icon SVG.
+     * @param {string} cls Optional CSS class.
+     * @returns {HTMLElement}
+     */
+    function gvIcon(src, cls) {
+        const icon = document.createElement('gv-icon');
+        icon.setAttribute('src', src);
+        icon.setAttribute('aria-hidden', 'true');
+        if (cls) icon.className = cls;
+        return icon;
+    }
+
+    /**
+     * Set the connection status indicator.
+     *
+     * Maps states to Gravity indicator dot states:
+     *   connected  → gv-state-positive (green)
+     *   connecting → gv-state-busy     (amber, default)
+     *   error      → gv-state-critical (red)
+     *
+     * @param {'connected'|'connecting'|'error'} state
      */
     function setStatus(state) {
-        if (!statusEl) return;
-        statusEl.className = 'wap-chat__status wap-chat__status--' + state;
+        if (!indicatorDotEl || !statusTextEl) return;
 
-        const labels = {
-            connected:  '● Connected',
-            connecting: '○ ' + (i18n.reconnecting || 'Connecting…'),
-            error:      '✕ Disconnected',
+        const stateMap = {
+            connected:  { cls: 'gv-state-positive', label: 'Connected' },
+            connecting: { cls: 'gv-state-busy',     label: i18n.reconnecting || 'Connecting…' },
+            error:      { cls: 'gv-state-critical',  label: 'Disconnected' },
         };
-        statusEl.textContent = labels[state] || state;
+        const s = stateMap[state] || stateMap.connecting;
+        indicatorDotEl.className = 'gv-indicator ' + s.cls;
+        statusTextEl.textContent = s.label;
     }
 
     /**
      * Enable or disable the send button and textarea.
      *
-     * @param {boolean} disabled Whether to disable the controls.
+     * @param {boolean} disabled
      */
     function setSendDisabled(disabled) {
-        sendBtn.disabled   = disabled;
-        inputEl.disabled   = disabled;
+        sendBtn.disabled = disabled;
+        inputEl.disabled = disabled;
     }
 
     /**
