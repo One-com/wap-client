@@ -9,7 +9,7 @@
         "chat",
         "wap"
     ],
-    "homepage": "https://github.com/ankitsoni27/wap-client",
+    "homepage": "https://github.com/One-com/wap-client",
     "authors": [
         {
             "name": "group.one",
@@ -17,8 +17,8 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/ankitsoni27/wap-client/issues",
-        "source": "https://github.com/ankitsoni27/wap-client"
+        "issues": "https://github.com/One-com/wap-client/issues",
+        "source": "https://github.com/One-com/wap-client"
     },
     "require": {
         "php": ">=7.4"
