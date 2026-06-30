@@ -1,196 +1,210 @@
 /**
- * WAP Chat Widget — Layout and custom CSS.
+ * WAP Chat Widget — layout glue only.
  *
- * Gravity (group-one brand) handles all component styling.
- * This file covers only:
- *   - Widget layout shell (flex column, sizing)
- *   - Header and input-area flex layout
- *   - Messages scroll container
- *   - Custom patterns with no Gravity equivalent:
- *       typing indicator, routing text, action JSON blocks, inline errors
- *   - Responsive overrides
+ * The chat is built entirely from Gravity (group-one brand) UI components:
+ *   gv-chat / gv-chat-list / gv-chat-message / gv-chat-message-body  (conversation)
+ *   gv-input-ai / gv-input-textarea / gv-input-toolbar               (composer)
+ *   gv-stream-loader                                                 (thinking state)
+ *   gv-chip                                                          (suggested prompts)
+ *   gv-text-indicator / gv-indicator                                (connection status)
+ *   gv-button / gv-button-icon                                      (actions / send)
+ *   gv-notice                                                        (errors / success)
+ *   gv-accordion                                                     (tool-use cards)
+ *
+ * This file only sizes the shell and adds the few things Gravity has no token
+ * for (full-height fit, chat header row, markdown spacing inside a message
+ * body, suggestion-chip row). No bespoke message styling — Gravity owns that.
  *
  * @package GroupOne\WapClient
- * @version 1.0.0
+ * @version 1.1.1
  */
 
 /* ---------------------------------------------------------------------------
-   Base wrapper
+   Shell — give gv-chat a height to fill (gv-chat is height:100%)
    --------------------------------------------------------------------------- */
 
 .wap-client-wrap {
     box-sizing: border-box;
 }
 
-/* ---------------------------------------------------------------------------
-   Chat root — flex column shell
-   --------------------------------------------------------------------------- */
-
 .wap-chat-root {
-    display:       flex;
+    display:        flex;
     flex-direction: column;
-    max-width:     900px;
-    height:        600px;
-    overflow:      hidden;
-    border:        1px solid var(--color-border-default);
-    border-radius: var(--radius-md);
-    box-shadow:    var(--shadow-md);
-    background:    var(--color-surface-default);
+    width:          100%;
+    max-width:      900px;
+    height:         calc(100vh - 170px);
+    min-height:     480px;
+    overflow:       hidden;
+    border:         1px solid var(--color-border-default, #e3e5ea);
+    border-radius:  var(--border-radius, 12px);
+    box-shadow:     var(--shadow-md, 0 4px 16px rgba(0, 0, 0, 0.08));
+    background:     var(--color-surface-bright, #fff);
+}
+
+/* gv-chat fills the remaining height below the header and scrolls internally */
+.wap-chat-root .gv-chat {
+    flex:       1 1 auto;
+    min-height: 0;
+    width:      100%;
 }
 
 /* ---------------------------------------------------------------------------
-   Header bar
+   Header row (status indicator + GDPR action). Built from Gravity atoms.
    --------------------------------------------------------------------------- */
 
 .wap-chat__header {
-    display:          flex;
-    align-items:      center;
-    justify-content:  space-between;
-    padding:          var(--size-3) var(--size-4);
-    background:       var(--color-surface-dim);
-    border-bottom:    1px solid var(--color-border-default);
-    flex-shrink:      0;
-    gap:              var(--size-3);
+    display:         flex;
+    align-items:     center;
+    justify-content: space-between;
+    gap:             var(--size-md, 16px);
+    padding:         var(--size-sm, 12px) var(--size-lg, 20px);
+    border-bottom:   1px solid var(--color-border-default, #e3e5ea);
+    background:      var(--color-surface-bright, #fff);
+    flex-shrink:     0;
 }
 
 /* ---------------------------------------------------------------------------
-   Messages scroll area
+   Suggested-prompt chips (welcome state). gv-chip provides the chip styling;
+   this only lays them out in a wrapping row.
    --------------------------------------------------------------------------- */
 
-.wap-chat__messages {
-    flex:            1 1 auto;
-    overflow-y:      auto;
-    padding:         var(--size-4);
-    scroll-behavior: smooth;
-    background:      var(--color-surface-default);
+.wap-chat__suggestions {
+    display:   flex;
+    flex-wrap: wrap;
+    gap:       var(--size-sm, 8px);
+    margin-top: var(--size-sm, 8px);
 }
 
-.wap-chat__messages::-webkit-scrollbar {
-    width: 6px;
-}
-
-.wap-chat__messages::-webkit-scrollbar-thumb {
-    background-color: var(--color-border-default);
-    border-radius:    3px;
-}
-
-/* gv-chat fills the scroll container */
-.wap-chat__messages .gv-chat {
-    display: block;
+.wap-chat__suggestions .gv-chip {
+    cursor: pointer;
 }
 
 /* ---------------------------------------------------------------------------
-   Input area
+   Width overrides.
+
+   Gravity's chat is tuned for a narrow support/side-panel: it caps the message
+   column at 696px and every message body at 320px. That is far too narrow for
+   AI answers with tables and code, and it leaves assistant replies sitting in
+   ~half the chat. These selectors are deliberately MORE specific than Gravity's
+   own rules (which use `.gv-activated …`), so they actually win the cascade —
+   the previous override lost to Gravity's 4-class `max-width:320px` rule.
+
+   We widen the column to the full shell and let ASSISTANT (incoming) bodies use
+   the full width; USER (outgoing) bubbles keep a sensible cap so short messages
+   still read as bubbles rather than full-width banners.
    --------------------------------------------------------------------------- */
 
-.wap-chat__input-area {
-    display:       flex;
-    align-items:   flex-end;
-    gap:           var(--size-3);
-    padding:       var(--size-3) var(--size-4);
-    background:    var(--color-surface-dim);
-    border-top:    1px solid var(--color-border-default);
-    flex-shrink:   0;
+.wap-chat-root.gv-activated .gv-chat .gv-chat-list,
+.wap-chat-root.gv-activated .gv-chat footer {
+    max-width: 100%;
 }
 
-/* Textarea wrapper grows to fill available space */
-.wap-chat__textarea-wrap {
-    flex: 1;
+.wap-chat-root.gv-activated .gv-chat-list .gv-chat-message.gv-chat-incoming .gv-chat-message-body {
+    max-width: 100%;
+    width:     100%;
 }
 
-/* Cap the textarea resize so it doesn't break the layout */
-.wap-chat__input-area .gv-input-textarea {
-    resize:     vertical;
-    max-height: 10rem;
+.wap-chat-root.gv-activated .gv-chat-list .gv-chat-message.gv-chat-outgoing .gv-chat-message-body {
+    max-width: 75%;
 }
+
+/* Markdown spacing inside a message body (Gravity styles text, not block flow) */
+.gv-chat-message-body > *:first-child { margin-top: 0; }
+.gv-chat-message-body > *:last-child  { margin-bottom: 0; }
+.gv-chat-message-body p  { margin: 0 0 0.6em; }
+.gv-chat-message-body ul,
+.gv-chat-message-body ol { margin: 0.4em 0; padding-left: 1.4em; }
+.gv-chat-message-body li { margin: 0.2em 0; }
+.gv-chat-message-body pre {
+    background:    var(--color-surface-dim, #1e1e22);
+    border-radius: var(--border-radius, 8px);
+    padding:       var(--size-sm, 12px);
+    overflow-x:    auto;
+    margin:        0.5em 0;
+}
+.gv-chat-message-body code {
+    font-family: var(--font-family-mono, ui-monospace, Menlo, monospace);
+    font-size:   0.9em;
+}
+.gv-chat-message-body h1,
+.gv-chat-message-body h2,
+.gv-chat-message-body h3,
+.gv-chat-message-body h4,
+.gv-chat-message-body h5,
+.gv-chat-message-body h6 {
+    margin:      0.8em 0 0.4em;
+    line-height: 1.3;
+    font-weight: var(--font-weight-semibold, 600);
+}
+.gv-chat-message-body h1 { font-size: 1.3em; }
+.gv-chat-message-body h2 { font-size: 1.2em; }
+.gv-chat-message-body h3 { font-size: 1.1em; }
+.gv-chat-message-body h4,
+.gv-chat-message-body h5,
+.gv-chat-message-body h6 { font-size: 1em; }
+.gv-chat-message-body hr {
+    border:        none;
+    border-top:    1px solid var(--color-border-default, #e3e5ea);
+    margin:        0.9em 0;
+}
+.gv-chat-message-body blockquote {
+    margin:       0.6em 0;
+    padding-left: 0.9em;
+    border-left:  3px solid var(--color-border-default, #e3e5ea);
+    color:        var(--color-body-on-alternative, #646970);
+}
+.gv-chat-message-body table {
+    border-collapse: collapse;
+    width:           100%;
+    margin:          0.6em 0;
+    font-size:       0.95em;
+}
+.gv-chat-message-body th,
+.gv-chat-message-body td {
+    border:     1px solid var(--color-border-default, #e3e5ea);
+    padding:    var(--size-xs, 6px) var(--size-sm, 10px);
+    text-align: left;
+    vertical-align: top;
+}
+.gv-chat-message-body th {
+    background:  var(--color-surface-dim, #f6f7f9);
+    font-weight: var(--font-weight-semibold, 600);
+}
+/* Let tables scroll horizontally on small bubbles rather than overflow */
+.gv-chat-message-body table { display: block; overflow-x: auto; }
 
 /* ---------------------------------------------------------------------------
-   Typing indicator (no Gravity equivalent)
-   --------------------------------------------------------------------------- */
-
-.wap-chat__typing {
-    display:     flex;
-    align-items: center;
-    gap:         4px;
-    padding:     var(--size-1) 0;
-}
-
-.wap-chat__typing span {
-    display:          inline-block;
-    width:            7px;
-    height:           7px;
-    border-radius:    50%;
-    background-color: var(--color-on-surface-secondary);
-    animation:        wap-typing-bounce 1.2s infinite ease-in-out;
-}
-
-.wap-chat__typing span:nth-child(2) { animation-delay: 0.2s; }
-.wap-chat__typing span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes wap-typing-bounce {
-    0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
-    40%           { transform: scale(1);   opacity: 1;   }
-}
-
-/* ---------------------------------------------------------------------------
-   Routing indicator (no Gravity equivalent)
-   --------------------------------------------------------------------------- */
-
-.wap-chat__routing {
-    font-size:     var(--font-size-sm);
-    color:         var(--color-on-surface-secondary);
-    font-style:    italic;
-    margin-bottom: var(--size-2);
-}
-
-/* ---------------------------------------------------------------------------
-   Tool-use action card — JSON blocks (no Gravity equivalent)
+   Tool-use action JSON inside the gv-accordion body.
    --------------------------------------------------------------------------- */
 
 .wap-chat__action-json {
-    background:   var(--color-surface-muted);
-    border:       1px solid var(--color-border-default);
-    border-radius: var(--radius-sm);
-    font-family:  var(--font-family-mono);
-    font-size:    var(--font-size-sm);
-    margin:       0;
-    max-height:   200px;
-    overflow:     auto;
-    padding:      var(--size-2) var(--size-3);
-    white-space:  pre-wrap;
-    word-break:   break-word;
-}
-
-/* ---------------------------------------------------------------------------
-   Inline error inside an assistant message (no Gravity equivalent)
-   --------------------------------------------------------------------------- */
-
-.wap-chat__error-inline {
-    margin:    var(--size-2) 0 0;
-    color:     var(--color-critical-default);
-    font-size: var(--font-size-sm);
+    background:    var(--color-surface-dim, #f6f7f9);
+    border:        1px solid var(--color-border-default, #e3e5ea);
+    border-radius: var(--border-radius-sm, 6px);
+    font-family:   var(--font-family-mono, ui-monospace, Menlo, monospace);
+    font-size:     calc(var(--font-size-caption-lg, 0.8) * 1rem);
+    margin:        var(--size-xs, 4px) 0 0;
+    max-height:    220px;
+    overflow:      auto;
+    padding:       var(--size-sm, 8px);
+    white-space:   pre-wrap;
+    word-break:    break-word;
 }
 
 /* ---------------------------------------------------------------------------
    Responsive
    --------------------------------------------------------------------------- */
 
-@media (max-width: 600px) {
+@media (max-width: 782px) {
+    .wap-client-wrap { margin-top: var(--size-md, 16px); }
+
     .wap-chat-root {
-        height:        calc(100vh - 120px);
+        height:        calc(100vh - 130px);
         max-width:     100%;
         border-left:   none;
         border-right:  none;
         border-radius: 0;
     }
 
-    .wap-chat__action-json {
-        max-height: 120px;
-    }
-}
-
-@media screen and (max-width: 782px) {
-    .wap-client-wrap {
-        margin-top: var(--size-4);
-    }
+    .wap-chat__action-json { max-height: 140px; }
 }

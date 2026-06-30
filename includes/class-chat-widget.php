@@ -264,10 +264,25 @@ class ChatWidget
                 'mode'            => esc_js($page['mode']),
                 'pageContext'     => esc_js($page['page_context']),
                 'menuSlug'        => esc_js($menu_slug),
+                'userInitial'     => esc_js(self::user_initial()),
+                'suggestions'     => apply_filters(
+                    'wap_client_suggestions',
+                    [
+                        __('What can you help me with?', 'wap-client'),
+                        __('How do I speed up my site?', 'wap-client'),
+                        __('Summarise my recent activity', 'wap-client'),
+                    ],
+                    $page['product']
+                ),
                 'i18n'            => [
+                    'assistantName'  => esc_html($page['menu_title']),
+                    'welcomeTitle'   => __('How can I help?', 'wap-client'),
+                    'welcomeSubtitle'=> __('Ask me anything about your site, content, or settings.', 'wap-client'),
+                    'hint'           => __('Enter to send · Shift+Enter for a new line', 'wap-client'),
                     'placeholder'    => __('Ask the AI assistant…', 'wap-client'),
                     'send'           => __('Send', 'wap-client'),
-                    'reconnecting'   => __('Reconnecting…', 'wap-client'),
+                    'thinking'       => __('Thinking…', 'wap-client'),
+                    'reconnecting'   => __('Connecting…', 'wap-client'),
                     'actionLabel'    => __('Action', 'wap-client'),
                     'showDetails'    => __('Show details', 'wap-client'),
                     'hideDetails'    => __('Hide details', 'wap-client'),
@@ -279,6 +294,21 @@ class ChatWidget
                 ],
             ]
         );
+    }
+
+    /**
+     * First initial of the current user, used for the user avatar.
+     *
+     * @return string A single uppercase character, or 'Y' as a fallback.
+     */
+    private static function user_initial(): string
+    {
+        $user = wp_get_current_user();
+        $name = $user && $user->exists()
+            ? ($user->display_name ?: $user->user_login)
+            : '';
+        $first = trim((string) $name) !== '' ? mb_substr(trim($name), 0, 1) : 'Y';
+        return strtoupper($first);
     }
 
     // -------------------------------------------------------------------------

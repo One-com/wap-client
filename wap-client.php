@@ -47,7 +47,7 @@ use Groupone\WapClient\GdprHandler;
 // Constants
 // ---------------------------------------------------------------------------
 
-define('WAP_CLIENT_VERSION', '1.0.0');
+define('WAP_CLIENT_VERSION', '1.1.4');
 define('WAP_CLIENT_DIR', plugin_dir_path(__FILE__));
 define('WAP_CLIENT_URL', plugin_dir_url(__FILE__));
 

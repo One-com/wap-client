@@ -1,7 +1,10 @@
 /**
  * WAP Chat Widget — Vanilla JS SSE streaming chat client.
  *
- * No framework, no jQuery. Communicates with the WAP backend via:
+ * No framework, no jQuery. The entire UI is composed from Gravity (group-one
+ * brand) UI components — see wap-chat.css header for the component list.
+ *
+ * Communicates with the WAP backend via:
  *   - Server-sent Events (POST /api/v1/chat/stream) for streaming responses.
  *   - WordPress AJAX (admin-ajax.php) for server-side auth and GDPR erasure.
  *   - Direct fetch (GET /api/v1/chat/{conversation_id}/history) for history.
@@ -9,10 +12,10 @@
  * Expects WapClientConfig to be localised into the page by PHP.
  *
  * @package GroupOne\WapClient
- * @version 1.0.0
+ * @version 1.1.1
  */
 
-/* global WapClientConfig, EventSource, fetch, AbortController */
+/* global WapClientConfig, fetch, AbortController, TextDecoder */
 
 (function () {
     'use strict';
@@ -24,30 +27,24 @@
     let cfg = window.WapClientConfig || {};
     let i18n = cfg.i18n || {};
 
+    const ICON_BASE = 'https://gravity.group-cdn.one/v5.40.0/icons/';
+
     // -------------------------------------------------------------------------
     // State
     // -------------------------------------------------------------------------
 
-    /** @type {string} Active WAP Bearer token. */
     let sessionToken = cfg.sessionToken || '';
-
-    /** @type {Promise<string>|null} In-flight auth promise, shared across concurrent callers. */
     let authPromise = null;
-
-    /** @type {AbortController|null} Controller for the current SSE fetch. */
     let currentAbortController = null;
-
-    /** @type {boolean} Whether we are currently waiting for a response. */
     let isStreaming = false;
-
-    /** @type {number} Counter for generating unique accordion IDs. */
     let accCounter = 0;
+    let hasMessages = false;
 
     // -------------------------------------------------------------------------
     // DOM references — resolved after DOMContentLoaded.
     // -------------------------------------------------------------------------
 
-    let rootEl, messagesEl, chatListEl, inputEl, sendBtn, indicatorDotEl, statusTextEl, deleteDataBtn;
+    let rootEl, chatEl, chatListEl, inputEl, sendBtn, indicatorDotEl, statusTextEl, deleteDataBtn;
 
     // -------------------------------------------------------------------------
     // Initialisation
@@ -58,10 +55,6 @@
     window.WapChat = window.WapChat || {};
     window.WapChat.init = init;
 
-    /**
-     * Initialise the chat widget.
-     * Builds the DOM inside #wap-chat-root, loads history, and wires events.
-     */
     function init() {
         rootEl = document.getElementById('wap-chat-root');
         if (!rootEl) return;
@@ -74,27 +67,26 @@
         }
         sessionToken = cfg.sessionToken || '';
         isStreaming = false;
+        hasMessages = false;
 
         buildUI();
         wireEvents();
+        showWelcome();
 
         authenticate(false).then(function () { loadHistory(); }).catch(function () {});
     }
 
     // -------------------------------------------------------------------------
-    // UI construction
+    // UI construction — all Gravity components
     // -------------------------------------------------------------------------
 
-    /**
-     * Build and inject the chat widget HTML structure using Gravity components.
-     */
     function buildUI() {
         rootEl.innerHTML = '';
+        rootEl.classList.add('gv-activated');
 
-        // Header bar.
+        // ---- Header: gv-text-indicator + gv-button --------------------------
         const header = el('div', 'wap-chat__header');
 
-        // Status indicator — gv-text-indicator with dot states.
         const statusWrapper = el('div', 'gv-text-indicator');
         indicatorDotEl = el('div', 'gv-indicator gv-state-busy');
         statusTextEl = el('span', '');
@@ -103,79 +95,118 @@
         statusWrapper.appendChild(statusTextEl);
         header.appendChild(statusWrapper);
 
-        // Delete data button (GDPR) — gv-button secondary condensed.
         deleteDataBtn = el('button', 'gv-button gv-button-secondary gv-mode-condensed');
         deleteDataBtn.type = 'button';
         deleteDataBtn.textContent = i18n.deleteData || 'Delete my data';
         deleteDataBtn.setAttribute('aria-label', i18n.deleteData || 'Delete my data');
         header.appendChild(deleteDataBtn);
 
-        // Messages scroll container.
-        messagesEl = el('div', 'wap-chat__messages');
-        messagesEl.setAttribute('aria-label', 'Chat messages');
+        // ---- gv-chat: list + footer -----------------------------------------
+        chatEl = el('section', 'gv-chat');
+        chatEl.setAttribute('role', 'log');
+        chatEl.setAttribute('aria-live', 'polite');
 
-        // gv-chat list inside the scroll container.
-        const gvChat = el('section', 'gv-chat');
-        chatListEl = el('ul', 'gv-chat-list');
-        gvChat.setAttribute('role', 'log');
-        gvChat.setAttribute('aria-live', 'polite');
-        gvChat.appendChild(chatListEl);
-        messagesEl.appendChild(gvChat);
+        chatListEl = el('div', 'gv-chat-list');
+        chatListEl.setAttribute('aria-label', 'Chat messages');
 
-        // Input area.
-        const inputArea = el('div', 'wap-chat__input-area');
+        const footer = el('footer', '');
+        const footerInner = el('div', 'gv-chat-footer');
 
-        // Textarea wrapped in gv-form-option.
-        const formOption = el('div', 'gv-form-option wap-chat__textarea-wrap');
-        inputEl = el('textarea', 'gv-input gv-input-textarea');
-        inputEl.setAttribute('rows', '3');
+        // gv-input-ai composer: toolbar (with send button) + textarea.
+        const inputAi = el('div', 'gv-input-ai');
+        const inputBox = el('div', 'gv-input gv-input-textarea');
+
+        const toolbar = el('div', 'gv-input-toolbar');
+        const toolbarEnd = el('div', 'gv-toolbar-end');
+
+        sendBtn = el('button', 'gv-button gv-button-primary gv-button-icon');
+        sendBtn.type = 'button';
+        sendBtn.setAttribute('aria-label', i18n.send || 'Send');
+        sendBtn.title = i18n.send || 'Send';
+        sendBtn.appendChild(gvIcon(ICON_BASE + 'send.svg'));
+        toolbarEnd.appendChild(sendBtn);
+        toolbar.appendChild(toolbarEnd);
+
+        inputEl = el('textarea', '');
+        inputEl.setAttribute('rows', '1');
         inputEl.setAttribute('placeholder', i18n.placeholder || 'Ask the AI assistant…');
         inputEl.setAttribute('aria-label', i18n.placeholder || 'Ask the AI assistant…');
-        formOption.appendChild(inputEl);
 
-        // Send button — gv-button primary condensed.
-        sendBtn = el('button', 'gv-button gv-button-primary gv-mode-condensed');
-        sendBtn.type = 'button';
-        sendBtn.textContent = i18n.send || 'Send';
-        sendBtn.setAttribute('aria-label', i18n.send || 'Send');
+        // Textarea first so the text starts at the top of the box; the toolbar
+        // (with the send button) sits at the bottom-right corner.
+        inputBox.appendChild(inputEl);
+        inputBox.appendChild(toolbar);
+        inputAi.appendChild(inputBox);
+        footerInner.appendChild(inputAi);
+        footer.appendChild(footerInner);
 
-        inputArea.appendChild(formOption);
-        inputArea.appendChild(sendBtn);
+        chatEl.appendChild(chatListEl);
+        chatEl.appendChild(footer);
 
         rootEl.appendChild(header);
-        rootEl.appendChild(messagesEl);
-        rootEl.appendChild(inputArea);
+        rootEl.appendChild(chatEl);
     }
 
-    /**
-     * Wire DOM event listeners.
-     */
     function wireEvents() {
         sendBtn.addEventListener('click', handleSend);
 
         inputEl.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSend();
             }
         });
 
+        inputEl.addEventListener('input', autoGrow);
         deleteDataBtn.addEventListener('click', handleDeleteData);
+    }
+
+    function autoGrow() {
+        inputEl.style.height = 'auto';
+        inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+    }
+
+    // -------------------------------------------------------------------------
+    // Welcome / empty state — greeting message + gv-chip suggestions
+    // -------------------------------------------------------------------------
+
+    function showWelcome() {
+        if (hasMessages || chatListEl.querySelector('.wap-welcome')) return;
+
+        const msg = el('div', 'gv-chat-message gv-chat-incoming wap-welcome');
+        const body = el('div', 'gv-chat-message-body');
+        body.textContent = i18n.welcomeSubtitle || 'Hi! Ask me anything about your site, content, or settings.';
+        msg.appendChild(body);
+        chatListEl.appendChild(msg);
+
+        const suggestions = Array.isArray(cfg.suggestions) ? cfg.suggestions : [];
+        if (suggestions.length) {
+            const row = el('div', 'wap-chat__suggestions wap-welcome');
+            suggestions.slice(0, 4).forEach(function (text) {
+                const chip = el('button', 'gv-chip');
+                chip.type = 'button';
+                chip.textContent = text;
+                chip.addEventListener('click', function () {
+                    inputEl.value = text;
+                    autoGrow();
+                    handleSend();
+                });
+                row.appendChild(chip);
+            });
+            chatListEl.appendChild(row);
+        }
+    }
+
+    function clearWelcome() {
+        chatListEl.querySelectorAll('.wap-welcome').forEach(function (n) { n.remove(); });
     }
 
     // -------------------------------------------------------------------------
     // Authentication
     // -------------------------------------------------------------------------
 
-    /** Whether the next auth call should revoke the stored App Password. */
     let pendingForceNew = false;
 
-    /**
-     * Obtain a fresh WAP session token.
-     *
-     * @param {boolean} forceNew Revoke stored App Password and re-provision.
-     * @returns {Promise<string>}
-     */
     function authenticate(forceNew) {
         if (forceNew) pendingForceNew = true;
         if (authPromise) return authPromise;
@@ -278,8 +309,9 @@
                 return res.json();
             })
             .then(function (data) {
-                if (!data || !Array.isArray(data.messages)) return;
+                if (!data || !Array.isArray(data.messages) || !data.messages.length) return;
 
+                clearWelcome();
                 data.messages.forEach(function (msg) {
                     if (msg.role === 'user') {
                         appendUserMessage(msg.content || '');
@@ -305,8 +337,9 @@
         if (!message || isStreaming) return;
 
         inputEl.value = '';
-        inputEl.style.height = '';
+        inputEl.style.height = 'auto';
 
+        clearWelcome();
         appendUserMessage(message);
 
         if (!sessionToken) {
@@ -345,15 +378,12 @@
                     assistantEl.remove();
                     return authenticate(true).then(function () { sendMessage(message); });
                 }
-
                 if (!res.ok) {
                     throw new Error('HTTP ' + res.status);
                 }
-
                 if (!res.body) {
                     throw new Error('ReadableStream not supported');
                 }
-
                 return readSSEStream(res.body, assistantEl);
             })
             .catch(function (err) {
@@ -376,17 +406,14 @@
         const decoder  = new TextDecoder();
         let   buffer   = '';
         let   textNode = null;
+        let   rawText  = '';
 
-        /**
-         * Find or create the text paragraph inside the assistant message.
-         * Uses gv-chat-message-body for Gravity chat styling.
-         *
-         * @returns {HTMLParagraphElement}
-         */
+        const bodyEl = getBody(assistantEl);
+
         function getOrCreateTextNode() {
             if (!textNode) {
-                textNode = el('p', 'gv-chat-message-body');
-                assistantEl.appendChild(textNode);
+                textNode = bodyEl;
+                textNode.innerHTML = '';
             }
             return textNode;
         }
@@ -398,40 +425,42 @@
                     break;
 
                 case 'routing':
-                    if (event.routing) {
+                    if (event.routing === 'multi') {
                         textNode = null;
-                        const routingEl = el('div', 'wap-chat__routing');
-                        routingEl.textContent = event.routing === 'multi'
-                            ? '⟳ Consulting multiple specialists…'
-                            : '';
-                        if (routingEl.textContent) {
-                            assistantEl.appendChild(routingEl);
-                        }
+                        rawText = '';
+                        removeLoader(bodyEl);
+                        const routingEl = el('div', 'gv-stream-loader');
+                        const step = el('div', 'gv-step-working');
+                        step.textContent = 'Consulting multiple specialists…';
+                        routingEl.appendChild(step);
+                        assistantEl.appendChild(routingEl);
                     }
                     break;
 
                 case 'text_delta':
                     if (event.delta) {
-                        const typingEl = assistantEl.querySelector('.wap-chat__typing');
-                        if (typingEl) typingEl.remove();
-                        getOrCreateTextNode().textContent += event.delta;
+                        removeLoader(bodyEl);
+                        rawText += event.delta;
+                        getOrCreateTextNode().innerHTML = renderMarkdown(rawText);
                         scrollToBottom();
                     }
                     break;
 
                 case 'tool_use':
                     textNode = null;
+                    rawText = '';
+                    removeLoader(bodyEl);
                     appendToolUse(assistantEl, event.tool || '', event.input || {});
                     break;
 
                 case 'tool_result':
                     appendToolResult(assistantEl, event.tool || '', event.output || '');
                     textNode = null;
+                    rawText = '';
                     break;
 
                 case 'message_end':
-                    const doneTyping = assistantEl.querySelector('.wap-chat__typing');
-                    if (doneTyping) doneTyping.remove();
+                    removeLoader(bodyEl);
                     break;
 
                 case 'error':
@@ -455,11 +484,8 @@
                     if (line === 'data: [DONE]') return true;
                     if (line.startsWith('data: ')) {
                         try {
-                            const json = JSON.parse(line.slice(6));
-                            processEvent(json);
-                        } catch (e) {
-                            // Malformed event — skip.
-                        }
+                            processEvent(JSON.parse(line.slice(6)));
+                        } catch (e) { /* malformed — skip */ }
                     }
                 }
             }
@@ -470,10 +496,7 @@
             return reader.read().then(function (result) {
                 if (result.done) return;
                 var done = parseChunk(decoder.decode(result.value, { stream: true }));
-                if (done) {
-                    reader.cancel();
-                    return;
-                }
+                if (done) { reader.cancel(); return; }
                 return pump();
             });
         }
@@ -482,99 +505,98 @@
     }
 
     // -------------------------------------------------------------------------
-    // Message DOM builders
+    // Message DOM builders — Gravity gv-chat-message structure
     // -------------------------------------------------------------------------
 
-    /**
-     * Append a user message — gv-chat-message gv-chat-outgoing.
-     *
-     * @param {string} text
-     * @returns {HTMLLIElement}
-     */
+    function getBody(msgEl) {
+        return msgEl.querySelector('.gv-chat-message-body');
+    }
+
+    function makeMessage(direction, label) {
+        const msg = el('div', 'gv-chat-message ' + (direction === 'user' ? 'gv-chat-outgoing' : 'gv-chat-incoming'));
+
+        if (label) {
+            const meta = el('div', 'gv-meta');
+            const user = el('span', 'gv-meta-user');
+            user.textContent = label;
+            meta.appendChild(user);
+            msg.appendChild(meta);
+        }
+
+        const body = el('div', 'gv-chat-message-body');
+        msg.appendChild(body);
+        return msg;
+    }
+
     function appendUserMessage(text) {
-        const li = el('li', 'gv-chat-message gv-chat-outgoing');
-        const p  = el('p', 'gv-chat-message-body');
-        p.textContent = text;
-        li.appendChild(p);
-        chatListEl.appendChild(li);
+        hasMessages = true;
+        const msg = makeMessage('user', '');
+        getBody(msg).textContent = text;
+        chatListEl.appendChild(msg);
         scrollToBottom();
-        return li;
+        return msg;
     }
 
-    /**
-     * Append an assistant message placeholder with typing indicator.
-     *
-     * @returns {HTMLLIElement}
-     */
     function appendAssistantPlaceholder() {
-        const li = el('li', 'gv-chat-message gv-chat-incoming');
-        const typing = el('div', 'wap-chat__typing');
-        typing.setAttribute('aria-label', 'AI is thinking');
-        typing.innerHTML = '<span></span><span></span><span></span>';
-        li.appendChild(typing);
-        chatListEl.appendChild(li);
+        hasMessages = true;
+        const msg = makeMessage('assistant', i18n.assistantName || '');
+        const loader = el('div', 'gv-stream-loader');
+        const step = el('div', 'gv-step-working');
+        step.textContent = i18n.thinking || 'Thinking…';
+        loader.appendChild(step);
+        getBody(msg).appendChild(loader);
+        chatListEl.appendChild(msg);
         scrollToBottom();
-        return li;
+        return msg;
     }
 
-    /**
-     * Append a completed assistant message (history render).
-     *
-     * @param {string} text
-     * @returns {HTMLLIElement}
-     */
     function appendAssistantMessage(text) {
-        const li = el('li', 'gv-chat-message gv-chat-incoming');
-        const p  = el('p', 'gv-chat-message-body');
-        p.textContent = text;
-        li.appendChild(p);
-        chatListEl.appendChild(li);
-        return li;
+        hasMessages = true;
+        const msg = makeMessage('assistant', i18n.assistantName || '');
+        getBody(msg).innerHTML = renderMarkdown(text);
+        chatListEl.appendChild(msg);
+        return msg;
     }
 
-    /**
-     * Append an inline error to an existing assistant message.
-     *
-     * @param {HTMLLIElement} assistantEl
-     * @param {string}        errorMessage
-     */
+    function removeLoader(container) {
+        const loader = container.querySelector('.gv-stream-loader');
+        if (loader) loader.remove();
+    }
+
     function appendErrorToAssistant(assistantEl, errorMessage) {
-        const typing = assistantEl.querySelector('.wap-chat__typing');
-        if (typing) typing.remove();
-
-        const errEl = el('p', 'wap-chat__error-inline');
-        errEl.textContent = errorMessage;
-        assistantEl.appendChild(errEl);
-    }
-
-    /**
-     * Append a standalone error as a gv-notice gv-notice-alert.
-     *
-     * @param {string} errorMessage
-     */
-    function appendErrorMessage(errorMessage) {
-        const li = el('li', '');
-        li.setAttribute('role', 'alert');
+        const bodyEl = getBody(assistantEl);
+        removeLoader(bodyEl);
+        // Also clear any sibling routing loader.
+        removeLoader(assistantEl);
 
         const notice = el('div', 'gv-notice gv-notice-alert gv-mode-condensed');
-        const icon   = gvIcon('https://gravity.group-cdn.one/v5.40.0/icons/error.svg', 'gv-notice-icon');
         const content = el('p', 'gv-notice-content');
         content.textContent = errorMessage;
-        notice.appendChild(icon);
+        notice.appendChild(gvIcon(ICON_BASE + 'error.svg', 'gv-notice-icon'));
         notice.appendChild(content);
-        li.appendChild(notice);
+        bodyEl.appendChild(notice);
+    }
 
-        chatListEl.appendChild(li);
+    function appendErrorMessage(errorMessage) {
+        clearWelcome();
+        const msg = el('div', 'gv-chat-message gv-chat-incoming');
+        msg.setAttribute('role', 'alert');
+
+        const notice = el('div', 'gv-notice gv-notice-alert gv-mode-condensed');
+        const content = el('p', 'gv-notice-content');
+        content.textContent = errorMessage;
+        notice.appendChild(gvIcon(ICON_BASE + 'error.svg', 'gv-notice-icon'));
+        notice.appendChild(content);
+        msg.appendChild(notice);
+
+        chatListEl.appendChild(msg);
         scrollToBottom();
     }
 
-    /**
-     * Append a collapsible tool-use card using the Gravity accordion component.
-     *
-     * @param {HTMLLIElement} assistantEl
-     * @param {string}        toolName
-     * @param {Object}        toolInput
-     */
+    // -------------------------------------------------------------------------
+    // Tool-use cards — gv-accordion
+    // -------------------------------------------------------------------------
+
     function appendToolUse(assistantEl, toolName, toolInput) {
         accCounter++;
         const triggerId = 'wap-acc-trigger-' + accCounter;
@@ -586,17 +608,22 @@
         const item   = el('div', 'gv-acc-item');
         const header = el('h4', 'gv-acc-header');
 
-        const trigger = el('button', 'gv-acc-trigger gv-expanded');
+        const trigger = el('button', 'gv-acc-trigger');
         trigger.id = triggerId;
         trigger.type = 'button';
-        trigger.setAttribute('aria-expanded', 'true');
+        trigger.setAttribute('aria-expanded', 'false');
         trigger.setAttribute('aria-controls', bodyId);
 
         const title = el('span', 'gv-acc-title');
         title.textContent = (i18n.actionLabel || 'Action') + ': ' + toolName;
         trigger.appendChild(title);
+        header.appendChild(trigger);
 
-        // Toggle expand/collapse on click.
+        const accBody = el('div', 'gv-acc-body gv-hidden');
+        accBody.id = bodyId;
+        accBody.setAttribute('role', 'region');
+        accBody.setAttribute('aria-labelledby', triggerId);
+
         trigger.addEventListener('click', function () {
             const expanded = trigger.getAttribute('aria-expanded') === 'true';
             trigger.setAttribute('aria-expanded', String(!expanded));
@@ -604,19 +631,9 @@
             accBody.classList.toggle('gv-hidden', expanded);
         });
 
-        header.appendChild(trigger);
-
-        const accBody = el('div', 'gv-acc-body');
-        accBody.id = bodyId;
-        accBody.setAttribute('role', 'region');
-        accBody.setAttribute('aria-labelledby', triggerId);
-
         const content    = el('div', 'gv-acc-content');
-        const inputLabel = el('strong', '');
-        inputLabel.textContent = 'Input:';
-        const inputPre   = el('pre', 'wap-chat__action-json');
+        const inputPre    = el('pre', 'wap-chat__action-json');
         inputPre.textContent = JSON.stringify(toolInput, null, 2);
-        content.appendChild(inputLabel);
         content.appendChild(inputPre);
 
         accBody.appendChild(content);
@@ -626,13 +643,6 @@
         assistantEl.appendChild(accordion);
     }
 
-    /**
-     * Update an existing tool-use accordion with the execution result.
-     *
-     * @param {HTMLLIElement} assistantEl
-     * @param {string}        toolName
-     * @param {string|Object} output
-     */
     function appendToolResult(assistantEl, toolName, output) {
         const accordions = assistantEl.querySelectorAll('.gv-accordion[data-tool="' + toolName + '"]');
         const accordion  = accordions.length ? accordions[accordions.length - 1] : null;
@@ -641,14 +651,10 @@
         const content = accordion.querySelector('.gv-acc-content');
         if (!content) return;
 
-        const resultLabel = el('strong', '');
-        resultLabel.textContent = 'Result:';
         const resultPre = el('pre', 'wap-chat__action-json');
         resultPre.textContent = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
-        content.appendChild(resultLabel);
         content.appendChild(resultPre);
 
-        // Prefix the title with a checkmark once the result arrives.
         const title = accordion.querySelector('.gv-acc-title');
         if (title && !title.dataset.done) {
             title.dataset.done = '1';
@@ -704,23 +710,17 @@
                 }
 
                 sessionToken = '';
+                hasMessages = false;
 
-                // Clear message list and rebuild the gv-chat structure.
-                messagesEl.innerHTML = '';
-                const gvChat = el('section', 'gv-chat');
-                chatListEl = el('ul', 'gv-chat-list');
-                gvChat.appendChild(chatListEl);
-                messagesEl.appendChild(gvChat);
+                chatListEl.innerHTML = '';
 
-                // Show success notice — gv-notice gv-notice-success.
                 const notice  = el('div', 'gv-notice gv-notice-success');
                 notice.setAttribute('role', 'status');
-                const icon    = gvIcon('https://gravity.group-cdn.one/v5.40.0/icons/check_circle.svg', 'gv-notice-icon');
                 const content = el('p', 'gv-notice-content');
                 content.textContent = i18n.deleteSuccess || 'Your data has been deleted. Reload the page to resume.';
-                notice.appendChild(icon);
+                notice.appendChild(gvIcon(ICON_BASE + 'check.svg', 'gv-notice-icon'));
                 notice.appendChild(content);
-                messagesEl.appendChild(notice);
+                chatListEl.appendChild(notice);
 
                 setSendDisabled(true);
                 deleteDataBtn.setAttribute('disabled', 'disabled');
@@ -731,29 +731,185 @@
     }
 
     // -------------------------------------------------------------------------
+    // Minimal, safe Markdown renderer
+    // -------------------------------------------------------------------------
+
+    function escapeHtml(s) {
+        return s
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function safeHref(url) {
+        return /^(https?:|mailto:)/i.test(url) ? url : '#';
+    }
+
+    function inlineMd(text) {
+        text = text.replace(/`([^`]+)`/g, function (m, c) { return '<code>' + c + '</code>'; });
+        text = text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (m, label, url) {
+            return '<a href="' + escapeHtml(safeHref(url)) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>';
+        });
+        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
+        text = text.replace(/_([^_]+)_/g, '<em>$1</em>');
+        return text;
+    }
+
+    // A GFM table separator row: each cell is dashes with optional colons.
+    function isTableSeparator(line) {
+        const cells = line.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|');
+        return cells.length > 0 && cells.every(function (c) {
+            return /^\s*:?-{1,}:?\s*$/.test(c);
+        });
+    }
+
+    function splitTableRow(line) {
+        return line.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(function (c) {
+            return c.trim();
+        });
+    }
+
+    function renderMarkdown(src) {
+        if (!src) return '';
+        const escaped = escapeHtml(src); // '>' becomes '&gt;' — handled below.
+        const lines = escaped.split('\n');
+        let html = '';
+        let i = 0;
+        let listType = null;
+
+        function closeList() {
+            if (listType) { html += '</' + listType + '>'; listType = null; }
+        }
+
+        while (i < lines.length) {
+            const line = lines[i];
+            const trimmed = line.trim();
+
+            // Fenced code block
+            if (/^```/.test(trimmed)) {
+                closeList();
+                i++;
+                let code = '';
+                while (i < lines.length && !/^```/.test(lines[i].trim())) {
+                    code += lines[i] + '\n';
+                    i++;
+                }
+                i++;
+                html += '<pre><code>' + code.replace(/\n$/, '') + '</code></pre>';
+                continue;
+            }
+
+            // Horizontal rule
+            if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+                closeList();
+                html += '<hr>';
+                i++;
+                continue;
+            }
+
+            // ATX heading (# .. ######)
+            const hMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+            if (hMatch) {
+                closeList();
+                const level = hMatch[1].length;
+                html += '<h' + level + '>' + inlineMd(hMatch[2]) + '</h' + level + '>';
+                i++;
+                continue;
+            }
+
+            // GFM table: header row with pipes, followed by a separator row.
+            if (
+                line.indexOf('|') !== -1 &&
+                i + 1 < lines.length &&
+                lines[i + 1].indexOf('|') !== -1 &&
+                isTableSeparator(lines[i + 1])
+            ) {
+                closeList();
+                const headers = splitTableRow(line);
+                i += 2; // skip header + separator
+                let table = '<table><thead><tr>';
+                headers.forEach(function (h) { table += '<th>' + inlineMd(h) + '</th>'; });
+                table += '</tr></thead><tbody>';
+                while (i < lines.length && lines[i].trim() !== '' && lines[i].indexOf('|') !== -1) {
+                    const cells = splitTableRow(lines[i]);
+                    table += '<tr>';
+                    cells.forEach(function (c) { table += '<td>' + inlineMd(c) + '</td>'; });
+                    table += '</tr>';
+                    i++;
+                }
+                table += '</tbody></table>';
+                html += table;
+                continue;
+            }
+
+            // Blockquote ('>' was escaped to '&gt;')
+            if (/^\s*&gt;\s?/.test(line)) {
+                closeList();
+                let quote = '';
+                while (i < lines.length && /^\s*&gt;\s?/.test(lines[i])) {
+                    quote += lines[i].replace(/^\s*&gt;\s?/, '') + '\n';
+                    i++;
+                }
+                html += '<blockquote>' + inlineMd(quote.replace(/\n$/, '')).replace(/\n/g, '<br>') + '</blockquote>';
+                continue;
+            }
+
+            const ulMatch = line.match(/^\s*[-*]\s+(.*)$/);
+            const olMatch = line.match(/^\s*\d+\.\s+(.*)$/);
+
+            if (ulMatch) {
+                if (listType !== 'ul') { closeList(); html += '<ul>'; listType = 'ul'; }
+                html += '<li>' + inlineMd(ulMatch[1]) + '</li>';
+                i++;
+                continue;
+            }
+            if (olMatch) {
+                if (listType !== 'ol') { closeList(); html += '<ol>'; listType = 'ol'; }
+                html += '<li>' + inlineMd(olMatch[1]) + '</li>';
+                i++;
+                continue;
+            }
+
+            closeList();
+
+            if (line.trim() === '') { i++; continue; }
+
+            let para = line;
+            i++;
+            while (
+                i < lines.length &&
+                lines[i].trim() !== '' &&
+                !/^```/.test(lines[i].trim()) &&
+                !/^(-{3,}|\*{3,}|_{3,})$/.test(lines[i].trim()) &&
+                !/^#{1,6}\s+/.test(lines[i].trim()) &&
+                !/^\s*&gt;\s?/.test(lines[i]) &&
+                lines[i].indexOf('|') === -1 &&
+                !/^\s*[-*]\s+/.test(lines[i]) &&
+                !/^\s*\d+\.\s+/.test(lines[i])
+            ) {
+                para += '\n' + lines[i];
+                i++;
+            }
+            html += '<p>' + inlineMd(para).replace(/\n/g, '<br>') + '</p>';
+        }
+
+        closeList();
+        return html;
+    }
+
+    // -------------------------------------------------------------------------
     // UI utilities
     // -------------------------------------------------------------------------
 
-    /**
-     * Create a DOM element with optional class name.
-     *
-     * @param {string} tag
-     * @param {string} cls
-     * @returns {HTMLElement}
-     */
     function el(tag, cls) {
         const node = document.createElement(tag);
         if (cls) node.className = cls;
         return node;
     }
 
-    /**
-     * Create a <gv-icon> custom element.
-     *
-     * @param {string} src CDN URL of the icon SVG.
-     * @param {string} cls Optional CSS class.
-     * @returns {HTMLElement}
-     */
     function gvIcon(src, cls) {
         const icon = document.createElement('gv-icon');
         icon.setAttribute('src', src);
@@ -762,45 +918,26 @@
         return icon;
     }
 
-    /**
-     * Set the connection status indicator.
-     *
-     * Maps states to Gravity indicator dot states:
-     *   connected  → gv-state-positive (green)
-     *   connecting → gv-state-busy     (amber, default)
-     *   error      → gv-state-critical (red)
-     *
-     * @param {'connected'|'connecting'|'error'} state
-     */
     function setStatus(state) {
         if (!indicatorDotEl || !statusTextEl) return;
-
         const stateMap = {
             connected:  { cls: 'gv-state-positive', label: 'Connected' },
             connecting: { cls: 'gv-state-busy',     label: i18n.reconnecting || 'Connecting…' },
-            error:      { cls: 'gv-state-critical',  label: 'Disconnected' },
+            error:      { cls: 'gv-state-critical', label: 'Disconnected' },
         };
         const s = stateMap[state] || stateMap.connecting;
         indicatorDotEl.className = 'gv-indicator ' + s.cls;
         statusTextEl.textContent = s.label;
     }
 
-    /**
-     * Enable or disable the send button and textarea.
-     *
-     * @param {boolean} disabled
-     */
     function setSendDisabled(disabled) {
         sendBtn.disabled = disabled;
         inputEl.disabled = disabled;
     }
 
-    /**
-     * Scroll the messages container to the bottom.
-     */
     function scrollToBottom() {
-        if (messagesEl) {
-            messagesEl.scrollTop = messagesEl.scrollHeight;
+        if (chatListEl) {
+            chatListEl.scrollTop = chatListEl.scrollHeight;
         }
     }
 
