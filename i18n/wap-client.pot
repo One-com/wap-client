@@ -1,0 +1,168 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: WAP Client\n"
+"Report-Msgid-Bugs-To: https://github.com/One-com/wap-client/issues\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: \n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: wap-client i18n generator\n"
+
+
+msgid "AI Assistant"
+msgstr ""
+
+msgid "You"
+msgstr ""
+
+msgid "How can I help?"
+msgstr ""
+
+msgid "Ask me anything about your site, content, or settings."
+msgstr ""
+
+msgid "Enter to send · Shift+Enter for a new line"
+msgstr ""
+
+msgid "Ask the AI assistant…"
+msgstr ""
+
+msgid "Send"
+msgstr ""
+
+msgid "Stop"
+msgstr ""
+
+msgid "New chat"
+msgstr ""
+
+msgid "Scroll to bottom"
+msgstr ""
+
+msgid "Thinking…"
+msgstr ""
+
+msgid "Working…"
+msgstr ""
+
+msgid "Analyzing the website…"
+msgstr ""
+
+msgid "Retrieving configuration…"
+msgstr ""
+
+msgid "Interacting with WordPress…"
+msgstr ""
+
+msgid "Searching the web…"
+msgstr ""
+
+msgid "Reading a page…"
+msgstr ""
+
+msgid "Consulting multiple specialists…"
+msgstr ""
+
+msgid "Loading your conversation…"
+msgstr ""
+
+msgid "Connecting…"
+msgstr ""
+
+msgid "Connected"
+msgstr ""
+
+msgid "Disconnected"
+msgstr ""
+
+msgid "Action"
+msgstr ""
+
+msgid "Show details"
+msgstr ""
+
+msgid "Hide details"
+msgstr ""
+
+msgid "Terms & Conditions"
+msgstr ""
+
+msgid "Delete my data"
+msgstr ""
+
+msgid "Delete your data?"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "This will permanently delete all your conversation history with the AI assistant. This action cannot be undone."
+msgstr ""
+
+msgid "Your data has been deleted."
+msgstr ""
+
+msgid "An error occurred. Please try again."
+msgstr ""
+
+msgid "Too many requests. Please wait before sending another message."
+msgstr ""
+
+msgid "Could not connect to the AI assistant. Please reload the page, or contact support if this continues."
+msgstr ""
+
+msgid "Try again"
+msgstr ""
+
+msgid "Reference:"
+msgstr ""
+
+msgid "What can you help me with?"
+msgstr ""
+
+msgid "How do I speed up my site?"
+msgstr ""
+
+msgid "Summarise my recent activity"
+msgstr ""
+
+msgid "Connecting to AI assistant…"
+msgstr ""
+
+msgid "You do not have permission to access this page."
+msgstr ""
+
+msgid "A non-empty menu_slug is required."
+msgstr ""
+
+msgid "Insufficient permissions."
+msgstr ""
+
+msgid "Invalid request parameters."
+msgstr ""
+
+msgid "User not authenticated."
+msgstr ""
+
+msgid "This tool uses AI to generate content. Accuracy and legal compliance are not guaranteed. By using this tool you agree to {terms} and acknowledge {privacy}."
+msgstr ""
+
+msgid "Terms of Use"
+msgstr ""
+
+msgid "Privacy Policy"
+msgstr ""
+
+#. Docked chat column (WPIN-8579): panel region name and launcher states.
+msgid "AI assistant"
+msgstr ""
+
+msgid "Open the AI assistant"
+msgstr ""
+
+msgid "Hide the AI assistant"
+msgstr ""
+
+msgid "A non-empty id is required."
+msgstr ""
