@@ -1,0 +1,45 @@
+{
+    "name": "@group-one/wap-client",
+    "version": "2.2.2",
+    "description": "WAP (WordPress AI Platform) chat widget — browser client for SaaS hosts (e.g. partners.one). Built from the same canonical assets as the WordPress Composer package (groupone/wap-client).",
+    "license": "GPL-2.0-or-later",
+    "homepage": "https://gitlab.group.one/cpo-eng/wordpress-agentic-platform-poc/-/tree/main/wp-client-plugin/wap-client",
+    "repository": {
+        "type": "git",
+        "url": "https://gitlab.group.one/cpo-eng/wordpress-agentic-platform-poc.git"
+    },
+    "bugs": {
+        "url": "https://gitlab.group.one/cpo-eng/wordpress-agentic-platform-poc/-/issues"
+    },
+    "type": "module",
+    "engines": {
+        "node": ">=18"
+    },
+    "files": [
+        "dist",
+        "README.md"
+    ],
+    "exports": {
+        "./widget": {
+            "types": "./dist/widget.d.ts",
+            "default": "./dist/widget.esm.js"
+        },
+        "./widget.css": "./dist/wap-chat.css",
+        "./server": {
+            "types": "./dist/server.d.ts",
+            "node": "./dist/server.js"
+        }
+    },
+    "scripts": {
+        "build": "node npm/build.mjs",
+        "test": "npm run build && node npm/test-server.mjs && node --test npm/test-widget.mjs",
+        "prepack": "npm run test"
+    },
+    "keywords": [
+        "ai",
+        "chat",
+        "group-one",
+        "wap",
+        "widget"
+    ]
+}
