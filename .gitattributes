@@ -1,0 +1,29 @@
+# Which files the published Composer package (groupone/wap-client) contains.
+#
+# CI mirrors this folder to github.com/One-com/wap-client; Composer installs from
+# GitHub's zipball, which is `git archive`-generated and honours export-ignore.
+# So this file decides what a consumer gets in vendor/groupone/wap-client/.
+# --prefer-source installs get a full clone and are unaffected, by design.
+#
+# scripts/check-dist-contents.sh asserts the result and fails closed on any path
+# it cannot classify; see docs/publishing-wap-client.md.
+
+/tests/                 export-ignore
+/npm/                   export-ignore
+/package.json           export-ignore
+/scripts/               export-ignore
+/i18n/*.po              export-ignore
+/i18n/*.pot             export-ignore
+/.gitattributes         export-ignore
+/.gitignore             export-ignore
+
+# Build artifacts. Kept out of the mirrored commit by .gitignore too, but listed
+# here so the protection lives in the layer the guard actually inspects.
+/dist/                  export-ignore
+/node_modules/          export-ignore
+/*.tgz                  export-ignore
+/.npmrc                 export-ignore
+
+# Named by WPIN-9061 and does not currently exist; a no-op that keeps the
+# exclusion in place if a dev source tree is ever added here.
+/src/dev/               export-ignore
