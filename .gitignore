@@ -1,0 +1,16 @@
+# Composer
+/vendor/
+composer.lock
+
+# npm (build output + pack artifacts; this file is what travels to the
+# standalone GitHub mirror, where the monorepo root .gitignore does not exist)
+/node_modules/
+/dist/
+/.npmrc
+*.tgz
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.log
