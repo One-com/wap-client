@@ -1,0 +1,122 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: WAP Client\n"
+"Report-Msgid-Bugs-To: https://github.com/One-com/wap-client/issues\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: de-DE\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: wap-client i18n generator\n"
+
+
+msgid "AI Assistant"
+msgstr "KI-Assistent"
+
+msgid "You"
+msgstr "Sie"
+
+msgid "How can I help?"
+msgstr "Wie kann ich helfen?"
+
+msgid "Ask me anything about your site, content, or settings."
+msgstr "Fragen Sie mich alles zu Ihrer Website, Ihren Inhalten oder Einstellungen."
+
+msgid "Enter to send · Shift+Enter for a new line"
+msgstr "Enter zum Senden · Umschalt+Enter für eine neue Zeile"
+
+msgid "Ask the AI assistant…"
+msgstr "Fragen Sie den KI-Assistenten…"
+
+msgid "Send"
+msgstr "Senden"
+
+msgid "New chat"
+msgstr "Neuer Chat"
+
+msgid "Thinking…"
+msgstr "Denkt nach…"
+
+msgid "Consulting multiple specialists…"
+msgstr "Mehrere Spezialisten werden konsultiert…"
+
+msgid "Loading your conversation…"
+msgstr "Ihre Unterhaltung wird geladen…"
+
+msgid "Connecting…"
+msgstr "Verbindung wird hergestellt…"
+
+msgid "Connected"
+msgstr "Verbunden"
+
+msgid "Disconnected"
+msgstr "Getrennt"
+
+msgid "Action"
+msgstr "Aktion"
+
+msgid "Show details"
+msgstr "Details anzeigen"
+
+msgid "Hide details"
+msgstr "Details ausblenden"
+
+msgid "Terms & Conditions"
+msgstr "Allgemeine Geschäftsbedingungen"
+
+msgid "Delete my data"
+msgstr "Meine Daten löschen"
+
+msgid "Delete your data?"
+msgstr "Ihre Daten löschen?"
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+msgid "This will permanently delete all your conversation history with the AI assistant. This action cannot be undone."
+msgstr "Dadurch wird Ihr gesamter Unterhaltungsverlauf mit dem KI-Assistenten dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden."
+
+msgid "Your data has been deleted."
+msgstr "Ihre Daten wurden gelöscht."
+
+msgid "An error occurred. Please try again."
+msgstr "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
+
+msgid "Too many requests. Please wait before sending another message."
+msgstr "Zu viele Anfragen. Bitte warten Sie, bevor Sie eine weitere Nachricht senden."
+
+msgid "What can you help me with?"
+msgstr "Womit können Sie mir helfen?"
+
+msgid "How do I speed up my site?"
+msgstr "Wie beschleunige ich meine Website?"
+
+msgid "Summarise my recent activity"
+msgstr "Fassen Sie meine letzten Aktivitäten zusammen"
+
+msgid "Connecting to AI assistant…"
+msgstr "Verbindung zum KI-Assistenten wird hergestellt…"
+
+msgid "You do not have permission to access this page."
+msgstr "Sie haben keine Berechtigung, auf diese Seite zuzugreifen."
+
+msgid "A non-empty menu_slug is required."
+msgstr "Ein nicht leerer menu_slug ist erforderlich."
+
+msgid "Insufficient permissions."
+msgstr "Unzureichende Berechtigungen."
+
+msgid "Invalid request parameters."
+msgstr "Ungültige Anfrageparameter."
+
+msgid "User not authenticated."
+msgstr "Benutzer nicht authentifiziert."
+
+msgid "This tool uses AI to generate content. Accuracy and legal compliance are not guaranteed. By using this tool you agree to {terms} and acknowledge {privacy}."
+msgstr "Dieses Tool verwendet KI zur Erstellung von Inhalten. Genauigkeit und Rechtskonformität werden nicht garantiert. Durch die Nutzung dieses Tools stimmen Sie den {terms} zu und erkennen die {privacy} an."
+
+msgid "Terms of Use"
+msgstr "Nutzungsbedingungen"
+
+msgid "Privacy Policy"
+msgstr "Datenschutzerklärung"
