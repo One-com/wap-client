@@ -1,0 +1,122 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: WAP Client\n"
+"Report-Msgid-Bugs-To: https://github.com/One-com/wap-client/issues\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: es-ES\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: wap-client i18n generator\n"
+
+
+msgid "AI Assistant"
+msgstr "Asistente de IA"
+
+msgid "You"
+msgstr "Tú"
+
+msgid "How can I help?"
+msgstr "¿En qué puedo ayudarte?"
+
+msgid "Ask me anything about your site, content, or settings."
+msgstr "Pregúntame lo que quieras sobre tu sitio, contenido o ajustes."
+
+msgid "Enter to send · Shift+Enter for a new line"
+msgstr "Intro para enviar · Mayús+Intro para una nueva línea"
+
+msgid "Ask the AI assistant…"
+msgstr "Pregunta al asistente de IA…"
+
+msgid "Send"
+msgstr "Enviar"
+
+msgid "New chat"
+msgstr "Nuevo chat"
+
+msgid "Thinking…"
+msgstr "Pensando…"
+
+msgid "Consulting multiple specialists…"
+msgstr "Consultando a varios especialistas…"
+
+msgid "Loading your conversation…"
+msgstr "Cargando tu conversación…"
+
+msgid "Connecting…"
+msgstr "Conectando…"
+
+msgid "Connected"
+msgstr "Conectado"
+
+msgid "Disconnected"
+msgstr "Desconectado"
+
+msgid "Action"
+msgstr "Acción"
+
+msgid "Show details"
+msgstr "Mostrar detalles"
+
+msgid "Hide details"
+msgstr "Ocultar detalles"
+
+msgid "Terms & Conditions"
+msgstr "Términos y condiciones"
+
+msgid "Delete my data"
+msgstr "Eliminar mis datos"
+
+msgid "Delete your data?"
+msgstr "¿Eliminar tus datos?"
+
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgid "This will permanently delete all your conversation history with the AI assistant. This action cannot be undone."
+msgstr "Esto eliminará permanentemente todo tu historial de conversaciones con el asistente de IA. Esta acción no se puede deshacer."
+
+msgid "Your data has been deleted."
+msgstr "Tus datos se han eliminado."
+
+msgid "An error occurred. Please try again."
+msgstr "Se ha producido un error. Inténtalo de nuevo."
+
+msgid "Too many requests. Please wait before sending another message."
+msgstr "Demasiadas solicitudes. Espera antes de enviar otro mensaje."
+
+msgid "What can you help me with?"
+msgstr "¿En qué puedes ayudarme?"
+
+msgid "How do I speed up my site?"
+msgstr "¿Cómo acelero mi sitio?"
+
+msgid "Summarise my recent activity"
+msgstr "Resume mi actividad reciente"
+
+msgid "Connecting to AI assistant…"
+msgstr "Conectando con el asistente de IA…"
+
+msgid "You do not have permission to access this page."
+msgstr "No tienes permiso para acceder a esta página."
+
+msgid "A non-empty menu_slug is required."
+msgstr "Se requiere un menu_slug no vacío."
+
+msgid "Insufficient permissions."
+msgstr "Permisos insuficientes."
+
+msgid "Invalid request parameters."
+msgstr "Parámetros de solicitud no válidos."
+
+msgid "User not authenticated."
+msgstr "Usuario no autenticado."
+
+msgid "This tool uses AI to generate content. Accuracy and legal compliance are not guaranteed. By using this tool you agree to {terms} and acknowledge {privacy}."
+msgstr "Esta herramienta utiliza IA para generar contenido. No se garantizan la exactitud ni el cumplimiento legal. Al usar esta herramienta, aceptas los {terms} y reconoces la {privacy}."
+
+msgid "Terms of Use"
+msgstr "Términos de uso"
+
+msgid "Privacy Policy"
+msgstr "Política de privacidad"
