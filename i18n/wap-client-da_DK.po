@@ -1,0 +1,122 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: WAP Client\n"
+"Report-Msgid-Bugs-To: https://github.com/One-com/wap-client/issues\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: da-DK\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: wap-client i18n generator\n"
+
+
+msgid "AI Assistant"
+msgstr "AI-assistent"
+
+msgid "You"
+msgstr "Dig"
+
+msgid "How can I help?"
+msgstr "Hvordan kan jeg hjælpe?"
+
+msgid "Ask me anything about your site, content, or settings."
+msgstr "Spørg mig om hvad som helst om dit websted, dit indhold eller dine indstillinger."
+
+msgid "Enter to send · Shift+Enter for a new line"
+msgstr "Enter for at sende · Skift+Enter for ny linje"
+
+msgid "Ask the AI assistant…"
+msgstr "Spørg AI-assistenten…"
+
+msgid "Send"
+msgstr "Send"
+
+msgid "New chat"
+msgstr "Ny chat"
+
+msgid "Thinking…"
+msgstr "Tænker…"
+
+msgid "Consulting multiple specialists…"
+msgstr "Rådfører sig med flere specialister…"
+
+msgid "Loading your conversation…"
+msgstr "Indlæser din samtale…"
+
+msgid "Connecting…"
+msgstr "Opretter forbindelse…"
+
+msgid "Connected"
+msgstr "Forbundet"
+
+msgid "Disconnected"
+msgstr "Afbrudt"
+
+msgid "Action"
+msgstr "Handling"
+
+msgid "Show details"
+msgstr "Vis detaljer"
+
+msgid "Hide details"
+msgstr "Skjul detaljer"
+
+msgid "Terms & Conditions"
+msgstr "Vilkår og betingelser"
+
+msgid "Delete my data"
+msgstr "Slet mine data"
+
+msgid "Delete your data?"
+msgstr "Slet dine data?"
+
+msgid "Cancel"
+msgstr "Annuller"
+
+msgid "This will permanently delete all your conversation history with the AI assistant. This action cannot be undone."
+msgstr "Dette sletter permanent hele din samtalehistorik med AI-assistenten. Denne handling kan ikke fortrydes."
+
+msgid "Your data has been deleted."
+msgstr "Dine data er blevet slettet."
+
+msgid "An error occurred. Please try again."
+msgstr "Der opstod en fejl. Prøv igen."
+
+msgid "Too many requests. Please wait before sending another message."
+msgstr "For mange forespørgsler. Vent venligst, før du sender en ny besked."
+
+msgid "What can you help me with?"
+msgstr "Hvad kan du hjælpe mig med?"
+
+msgid "How do I speed up my site?"
+msgstr "Hvordan gør jeg mit websted hurtigere?"
+
+msgid "Summarise my recent activity"
+msgstr "Opsummer min seneste aktivitet"
+
+msgid "Connecting to AI assistant…"
+msgstr "Opretter forbindelse til AI-assistenten…"
+
+msgid "You do not have permission to access this page."
+msgstr "Du har ikke tilladelse til at få adgang til denne side."
+
+msgid "A non-empty menu_slug is required."
+msgstr "En ikke-tom menu_slug er påkrævet."
+
+msgid "Insufficient permissions."
+msgstr "Utilstrækkelige tilladelser."
+
+msgid "Invalid request parameters."
+msgstr "Ugyldige anmodningsparametre."
+
+msgid "User not authenticated."
+msgstr "Bruger ikke godkendt."
+
+msgid "This tool uses AI to generate content. Accuracy and legal compliance are not guaranteed. By using this tool you agree to {terms} and acknowledge {privacy}."
+msgstr "Dette værktøj bruger AI til at generere indhold. Nøjagtighed og juridisk overholdelse garanteres ikke. Ved at bruge dette værktøj accepterer du {terms} og anerkender {privacy}."
+
+msgid "Terms of Use"
+msgstr "Vilkår for brug"
+
+msgid "Privacy Policy"
+msgstr "Privatlivspolitik"
