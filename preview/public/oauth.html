@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample authorization</title>
+    <style>
+        body { margin: 0; display: grid; place-items: center; min-height: 100vh; background: #f5f7fa;
+               font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1f2933; }
+        main { width: min(420px, calc(100vw - 32px)); padding: 28px; background: #fff; border-radius: 10px;
+               box-shadow: 0 2px 12px rgba(0, 0, 0, .08); }
+        h1 { margin: 0 0 6px; font-size: 20px; }
+        .muted { color: #616e7c; font-size: 13px; }
+        .actions { display: flex; gap: 8px; margin-top: 20px; }
+        button { padding: 8px 14px; border-radius: 6px; border: 1px solid #cbd2d9; background: #fff; font: inherit; cursor: pointer; }
+        button.primary { background: #1f2933; border-color: #1f2933; color: #fff; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Search Insights</h1>
+    <p class="muted">Sample authorization page of the wap-client preview. Nothing is connected and no account is used.</p>
+    <p>The assistant asks to read your search data.</p>
+    <div class="actions">
+        <button type="button" class="primary" id="authorize">Authorize</button>
+        <button type="button" id="cancel">Cancel</button>
+    </div>
+</main>
+<script>
+    // What the backend's callback page does once the provider redirects back
+    // (py-backend/app/templates/mcp_oauth_done.html): hand the code to the opener,
+    // which redeems it under its own session (POST /api/v1/mcp/oauth/redeem).
+    var state = new URLSearchParams(window.location.search).get('state') || '';
+    document.getElementById('authorize').addEventListener('click', function () {
+        if (window.opener) {
+            window.opener.postMessage({ type: 'wap:mcp-oauth-code', state: state, code: 'preview-code' }, window.location.origin);
+        }
+        window.close();
+    });
+    document.getElementById('cancel').addEventListener('click', function () { window.close(); });
+</script>
+</body>
+</html>
