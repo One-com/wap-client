@@ -1,0 +1,206 @@
+{
+    "_about": [
+        "The payloads the preview streams, in the shapes py-backend sends them.",
+        "py-backend/tests/test_widget_preview_samples.py rebuilds each one through the backend's own code",
+        "(visual_payload, AskUserPayload, SseProjector, ChatTurnStream, flatten_history_for_ui, the chat routes...),",
+        "so a backend change to one of these shapes fails there, naming the sample to update.",
+        "{placeholders} are filled in per session by preview/replies.mjs and fake-wap.mjs.",
+        "A null is a value the fake sets itself (a visual, a document, media); the test checks the key is there."
+    ],
+    "turn": {
+        "message_start": { "type": "message_start", "conversationId": "{threadId}", "mode": "product", "agentName": "{agentName}" },
+        "status_thinking": { "type": "status", "phase": "start", "key": "thinking" },
+        "message_end": { "type": "message_end", "usage": { "inputTokens": 1840, "outputTokens": 212 } }
+    },
+    "tools": {
+        "mcp-adapter-discover-abilities": "analyzing",
+        "mcp-adapter-execute-ability": "applying",
+        "get_options": "retrieving",
+        "update_option": "applying",
+        "web_search": "searching",
+        "web_fetch": "reading",
+        "check_status": "working",
+        "render_visual": "visualizing",
+        "search_insights_query": "analyzing"
+    },
+    "visuals": {
+        "line": {
+            "kind": "line_chart",
+            "title": "Performance score, last 8 weeks",
+            "caption": "Weekly tests of your homepage. Delay JavaScript execution was turned on four weeks ago.",
+            "categories": ["Sep 21", "Sep 28", "Oct 5", "Oct 12", "Oct 19", "Oct 26", "Nov 2", "Nov 9"],
+            "series": [
+                { "name": "Mobile", "points": [48.0, 51.0, 50.0, 53.0, 71.0, 74.0, 78.0, 82.0] },
+                { "name": "Desktop", "points": [79.0, 80.0, 82.0, 81.0, 91.0, 93.0, 94.0, 96.0] }
+            ]
+        },
+        "bars": {
+            "kind": "bar_chart",
+            "title": "Largest Contentful Paint by page",
+            "caption": "Mobile, median of the last 7 days. Under 2.5 s is good.",
+            "unit": "s",
+            "categories": ["Homepage", "Shop", "Blog", "Contact"],
+            "series": [{ "name": "LCP", "points": [3.4, 2.9, 1.8, 1.2] }]
+        },
+        "gauge": {
+            "kind": "score_gauge",
+            "title": "Mobile performance score",
+            "caption": "Homepage, tested 2 hours ago.",
+            "value": 82.0,
+            "maxValue": 100.0
+        },
+        "stats": {
+            "kind": "stat_row",
+            "title": "Core Web Vitals, homepage",
+            "stats": [
+                { "label": "LCP", "value": "2.1 s", "delta": "-1.3 s", "state": "good" },
+                { "label": "INP", "value": "240 ms", "delta": "+40 ms", "state": "warn" },
+                { "label": "CLS", "value": "0.31", "state": "bad" },
+                { "label": "Cache hit rate", "value": "94%", "state": "neutral" }
+            ]
+        },
+        "html": {
+            "kind": "html",
+            "title": "What changed this week",
+            "html": "<table style=\"width:100%;border-collapse:collapse;font-size:14px\"><thead><tr><th style=\"text-align:left;padding:6px 8px;border-bottom:1px solid #ddd\">Setting</th><th style=\"text-align:left;padding:6px 8px;border-bottom:1px solid #ddd\">Before</th><th style=\"text-align:left;padding:6px 8px;border-bottom:1px solid #ddd\">Now</th></tr></thead><tbody><tr><td style=\"padding:6px 8px\">Remove unused CSS</td><td style=\"padding:6px 8px\">Off</td><td style=\"padding:6px 8px;color:#1a7f37;font-weight:600\">On</td></tr><tr><td style=\"padding:6px 8px\">Delay JavaScript execution</td><td style=\"padding:6px 8px\">Off</td><td style=\"padding:6px 8px;color:#1a7f37;font-weight:600\">On</td></tr><tr><td style=\"padding:6px 8px\">Cache lifespan</td><td style=\"padding:6px 8px\">10 hours</td><td style=\"padding:6px 8px\">24 hours</td></tr></tbody></table>"
+        }
+    },
+    "questions": {
+        "choose": {
+            "type": "question",
+            "question": "Which should I start with?",
+            "choices": ["Compress the images", "Remove unused CSS", "Delay third-party scripts"],
+            "multi_select": false,
+            "allow_free_text": true
+        },
+        "multi": {
+            "type": "question",
+            "question": "Which pages should never be cached?",
+            "choices": ["Cart", "Checkout", "My account", "Wishlist"],
+            "multi_select": true,
+            "allow_free_text": true
+        },
+        "permission": {
+            "type": "question",
+            "question": "The assistant wants to run `{product}/update-settings`. Allow it?",
+            "choices": [{ "label": "Allow", "value": "approve:7c1e2f" }, { "label": "Don't allow", "value": "reject" }],
+            "multi_select": false,
+            "allow_free_text": false,
+            "presentation": {
+                "kind": "permission_request",
+                "actions": ["{product}/update-settings"],
+                "approveValue": "approve:7c1e2f",
+                "rejectValue": "reject"
+            }
+        },
+        "permissions": {
+            "type": "question",
+            "question": "The assistant wants to run these actions:\n\n- `{product}/update-settings`\n- `{product}/clear-cache`\n- `{product}/preload-cache`\n\nAllow them?",
+            "choices": [{ "label": "Allow", "value": "approve:a90d44" }, { "label": "Don't allow", "value": "reject" }],
+            "multi_select": false,
+            "allow_free_text": false,
+            "presentation": {
+                "kind": "permission_request",
+                "actions": ["{product}/update-settings", "{product}/clear-cache", "{product}/preload-cache"],
+                "approveValue": "approve:a90d44",
+                "rejectValue": "reject"
+            }
+        },
+        "connect": {
+            "type": "question",
+            "question": "To use Search Insights, authorize access in the tab that opens, then choose an option below.",
+            "choices": [{ "label": "I've connected", "value": "connected" }, { "label": "Cancel", "value": "cancel" }],
+            "multi_select": false,
+            "allow_free_text": false,
+            "presentation": {
+                "kind": "mcp_oauth_consent",
+                "url": "{origin}/preview/oauth.html?state={threadIdPath}",
+                "serverLabel": "Search Insights",
+                "correlation": "{threadId}",
+                "callbackOrigin": "{origin}"
+            }
+        },
+        "handoff": {
+            "type": "question",
+            "question": "The {target.name} is better suited because it can measure your pages and chart the results. Switch agents?",
+            "choices": [
+                { "label": "Switch to {target.name}", "value": "handoff-confirm:{source.agentId}:{target.agentId}" },
+                { "label": "Stay with {source.name}", "value": "handoff-decline" }
+            ],
+            "multi_select": false,
+            "allow_free_text": false,
+            "presentation": {
+                "kind": "agent_handoff_confirmation",
+                "toolCallId": "toolu_preview_handoff_1",
+                "sourceRole": "{source.role}",
+                "sourceAgentId": "{source.agentId}",
+                "sourceAgent": "{source.displayName}",
+                "targetRole": "{target.role}",
+                "targetAgentId": "{target.agentId}",
+                "targetAgent": "{target.displayName}"
+            }
+        }
+    },
+    "handoff": {
+        "type": "agent_handoff",
+        "sourceRole": "{source.role}",
+        "sourceAgentId": "{source.agentId}",
+        "sourceAgent": "{source.displayName}",
+        "targetRole": "{target.role}",
+        "targetAgentId": "{target.agentId}",
+        "targetAgent": "{target.displayName}",
+        "brief": "The user wants to know why their homepage is slow on mobile and how it trended.",
+        "handoffToken": "preview-handoff-token"
+    },
+    "document": {
+        "id": "toolu_preview_invoice_1",
+        "title": "Invoice INV-2026-014",
+        "summary": "Acme Ceramics · Total EUR 267.40",
+        "filename": "invoice-inv-2026-014.pdf",
+        "pdfPath": "/api/v1/chat/{threadIdPath}/documents/toolu_preview_invoice_1/pdf",
+        "html": "<style>.wd{font:14px/1.5 system-ui,sans-serif;color:#1f2937;padding:24px}.wd h1{font-size:20px;margin:0 0 4px}.wd .muted{color:#6b7280}.wd table{width:100%;border-collapse:collapse;margin-top:16px}.wd th,.wd td{padding:6px 8px;border-bottom:1px solid #e5e7eb;text-align:left}.wd .n{text-align:right}.wd .total td{font-weight:600;border-bottom:0}</style><div class=\"wd\"><h1>Invoice INV-2026-014</h1><div class=\"muted\">Issued 9 November 2026 · Due 23 November 2026</div><p><strong>Acme Ceramics</strong><br>12 Kiln Street, 1000 Brussels</p><table><thead><tr><th>Description</th><th class=\"n\">Qty</th><th class=\"n\">Unit price</th><th class=\"n\">Amount</th></tr></thead><tbody><tr><td>Site speed audit</td><td class=\"n\">1</td><td class=\"n\">EUR 150.00</td><td class=\"n\">EUR 150.00</td></tr><tr><td>Image optimisation, per 100 images</td><td class=\"n\">2</td><td class=\"n\">EUR 35.00</td><td class=\"n\">EUR 70.00</td></tr><tr><td colspan=\"3\">VAT 21%</td><td class=\"n\">EUR 47.40</td></tr><tr class=\"total\"><td colspan=\"3\">Total</td><td class=\"n\">EUR 267.40</td></tr></tbody></table></div>"
+    },
+    "history": {
+        "response": { "threadId": "{threadId}", "messages": [] },
+        "user": { "role": "user", "content": "{content}" },
+        "assistant": { "role": "assistant", "content": "{content}" },
+        "assistantWithMedia": { "role": "assistant", "content": "{content}", "media": null },
+        "handoff": { "role": "handoff", "sourceAgent": "{sourceAgent}", "content": "{content}" },
+        "visual": { "role": "visual", "visual": null },
+        "document": { "role": "document", "document": null }
+    },
+    "agents": {
+        "response": { "agents": [], "current": "{current}" },
+        "entry": { "role": "{role}", "agentId": "{agentId}", "name": "{name}", "displayName": "{displayName}", "current": false }
+    },
+    "quota": {
+        "enabled": { "enabled": true, "remaining": 42, "total": 50, "used": 8, "resetAt": 1795000000000 },
+        "disabled": { "enabled": false }
+    },
+    "welcome": { "welcomeTitle": "{title}", "welcomeMessage": "{message}", "promptSuggestions": [] },
+    "conflicts": {
+        "no_pending_question": { "error": "no_pending_question", "message": "There is no pending question to answer." }
+    },
+    "media": {
+        "image": {
+            "images": [
+                "https://s3.amazonaws.com/helpscout.net/docs/assets/5415e7bfe4b01e2a68fe8243/images/6ada4c33708b8c2de8c0e00c/file-khCvnGhcPO.gif"
+            ]
+        },
+        "video": { "videos": ["G5E2Oa998bQ"] }
+    },
+    "errors": {
+        "failed": {
+            "type": "error",
+            "code": "stream_failed",
+            "message": "Something went wrong. Please try again.",
+            "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+            "timestamp": "2026-11-09T10:00:00+00:00"
+        },
+        "timeout": { "type": "error", "code": "stream_timeout", "message": "Stream timed out — please try again" }
+    },
+    "refusals": {
+        "rate": { "error": "rate_limit_exceeded", "resetAt": 0 },
+        "quota": { "error": "monthly_quota_exceeded", "resetAt": 0 }
+    }
+}
