@@ -1,0 +1,122 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: WAP Client\n"
+"Report-Msgid-Bugs-To: https://github.com/One-com/wap-client/issues\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: nl-NL\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: wap-client i18n generator\n"
+
+
+msgid "AI Assistant"
+msgstr "AI-assistent"
+
+msgid "You"
+msgstr "Jij"
+
+msgid "How can I help?"
+msgstr "Hoe kan ik helpen?"
+
+msgid "Ask me anything about your site, content, or settings."
+msgstr "Vraag me alles over je site, content of instellingen."
+
+msgid "Enter to send · Shift+Enter for a new line"
+msgstr "Enter om te verzenden · Shift+Enter voor een nieuwe regel"
+
+msgid "Ask the AI assistant…"
+msgstr "Vraag het de AI-assistent…"
+
+msgid "Send"
+msgstr "Verzenden"
+
+msgid "New chat"
+msgstr "Nieuwe chat"
+
+msgid "Thinking…"
+msgstr "Aan het denken…"
+
+msgid "Consulting multiple specialists…"
+msgstr "Meerdere specialisten raadplegen…"
+
+msgid "Loading your conversation…"
+msgstr "Je gesprek wordt geladen…"
+
+msgid "Connecting…"
+msgstr "Verbinden…"
+
+msgid "Connected"
+msgstr "Verbonden"
+
+msgid "Disconnected"
+msgstr "Verbinding verbroken"
+
+msgid "Action"
+msgstr "Actie"
+
+msgid "Show details"
+msgstr "Details tonen"
+
+msgid "Hide details"
+msgstr "Details verbergen"
+
+msgid "Terms & Conditions"
+msgstr "Algemene voorwaarden"
+
+msgid "Delete my data"
+msgstr "Mijn gegevens verwijderen"
+
+msgid "Delete your data?"
+msgstr "Je gegevens verwijderen?"
+
+msgid "Cancel"
+msgstr "Annuleren"
+
+msgid "This will permanently delete all your conversation history with the AI assistant. This action cannot be undone."
+msgstr "Hiermee wordt je volledige gespreksgeschiedenis met de AI-assistent permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt."
+
+msgid "Your data has been deleted."
+msgstr "Je gegevens zijn verwijderd."
+
+msgid "An error occurred. Please try again."
+msgstr "Er is een fout opgetreden. Probeer het opnieuw."
+
+msgid "Too many requests. Please wait before sending another message."
+msgstr "Te veel verzoeken. Wacht even voordat je een nieuw bericht verstuurt."
+
+msgid "What can you help me with?"
+msgstr "Waarmee kun je me helpen?"
+
+msgid "How do I speed up my site?"
+msgstr "Hoe versnel ik mijn site?"
+
+msgid "Summarise my recent activity"
+msgstr "Vat mijn recente activiteit samen"
+
+msgid "Connecting to AI assistant…"
+msgstr "Verbinding maken met AI-assistent…"
+
+msgid "You do not have permission to access this page."
+msgstr "Je hebt geen toestemming om deze pagina te openen."
+
+msgid "A non-empty menu_slug is required."
+msgstr "Een niet-lege menu_slug is vereist."
+
+msgid "Insufficient permissions."
+msgstr "Onvoldoende rechten."
+
+msgid "Invalid request parameters."
+msgstr "Ongeldige aanvraagparameters."
+
+msgid "User not authenticated."
+msgstr "Gebruiker niet geauthenticeerd."
+
+msgid "This tool uses AI to generate content. Accuracy and legal compliance are not guaranteed. By using this tool you agree to {terms} and acknowledge {privacy}."
+msgstr "Deze tool gebruikt AI om content te genereren. Nauwkeurigheid en juridische naleving worden niet gegarandeerd. Door deze tool te gebruiken ga je akkoord met de {terms} en erken je het {privacy}."
+
+msgid "Terms of Use"
+msgstr "Gebruiksvoorwaarden"
+
+msgid "Privacy Policy"
+msgstr "Privacybeleid"
